@@ -68,7 +68,7 @@ function AppRoutes() {
         <Route path="/aichat" element={<ChatWidget />} />
         <Route path="/paperview" element={<ViewPaper />} />
         <Route path="/solvepaper" element={<SolvePaper />} />
-        <Route
+        <Route  
           path="/upload"
           element={
             <ProtectedRoute>
