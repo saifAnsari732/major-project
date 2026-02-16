@@ -1,0 +1,22 @@
+
+.solution-btn{
+    margin-left: 20px;
+    border: 1px solid #05080b;
+    /* box-shadow: 0 3px 3px 3px rgba(11, 152, 199, 0.2); */
+    border-radius: 14px;
+    padding: 8px 19px;
+    color: rgb(0, 0, 0);
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    
+}
+.view-btn{
+    color: rgb(0, 0, 0);
+    padding:(0, 0, 0) 16px;
+    border: 1px solid #05080b;
+    padding: 8px 19px;
+
+    border-radius: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
