@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import '../styles/Home.css';
 import {
   GraduationCap,
   Monitor,
@@ -140,42 +141,42 @@ const Home = () => {
           </div>
 
           {/* Stats Section */}
-          <div className="grid grid-cols-3 gap-6 mt-16">
-            <div className="bg-gradient-to-br from-blue-700/50 to-blue-900/50 border border-blue-500/50 rounded-xl py-3 backdrop-blur-sm hover:border-blue-400/70 transition-all hover:scale-105 cursor-pointer">
-              <div className="text-3xl mb-2">🎓</div>
-              <p className="text-2xl font-bold text-white">500+</p>
-              <p className="text-blue-200">Awesome Courses</p>
+          <div className="stats-grid">
+            <div className="stat-card-hero">
+              <div className="stat-emoji">🎓</div>
+              <p className="stat-number">500+</p>
+              <p className="stat-label">Awesome Courses</p>
             </div>
-            <div className="bg-gradient-to-br from-cyan-900/50 to-blue-900/50 border border-cyan-500/50 rounded-xl py-3 backdrop-blur-sm hover:border-cyan-400/70 transition-all hover:scale-105 cursor-pointer">
-              <div className="text-3xl mb-2">👨‍💻</div>
-              <p className="text-2xl font-bold text-white">50K+</p>
-              <p className="text-blue-200">Happy Learners</p>
+            <div className="stat-card-hero">
+              <div className="stat-emoji">👨‍💻</div>
+              <p className="stat-number">50K+</p>
+              <p className="stat-label">Happy Learners</p>
             </div>
-            <div className="bg-gradient-to-br from-teal-900/50 to-blue-900/50 border border-teal-500/50 rounded-xl py-3 backdrop-blur-sm hover:border-teal-400/70 transition-all hover:scale-105 cursor-pointer">
-              <div className="text-3xl mb-2">🚀</div>
-              <p className="text-2xl font-bold text-white">95%</p>
-              <p className="text-blue-200">Success Rate</p>
+            <div className="stat-card-hero">
+              <div className="stat-emoji">🚀</div>
+              <p className="stat-number">95%</p>
+              <p className="stat-label">Success Rate</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Course Categories Section */}
-      <div className="relative py-8 px-4 sm:px-6 lg:px-8 border-t border-blue-700/20">
+      <div className="courses-section">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-6">Popular Courses</h2>
-            <p className="text-xl text-blue-200">Choose from our extensive library of programming and technology courses</p>
+          <div className="courses-header">
+            <h2 className="courses-title">Popular Courses</h2>
+            <p className="courses-subtitle">Choose from our extensive library of programming and technology courses</p>
           </div>
 
           {courses.length === 0 ? (
-            <div className="text-center py-16">
-              <Building className="h-20 w-20 text-blue-600 mx-auto mb-6" />
-              <p className="text-blue-300 text-xl">No courses available yet</p>
-              <p className="text-blue-400 mt-2">Check back soon for amazing content!</p>
+            <div className="empty-state">
+              <Building className="empty-state-icon" />
+              <p className="empty-state-title">No courses available yet</p>
+              <p className="empty-state-subtitle">Check back soon for amazing content!</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="courses-grid">
               {courses.map((course) => {
                 const Icon = courseIcons[course.name] || GraduationCap;
                 const colorClass = courseColors[course.name] || 'from-purple-500 to-cyan-500';
@@ -184,34 +185,34 @@ const Home = () => {
                 return (
                   <div
                     key={course._id}
-                    className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-800/50 to-blue-900/50 border border-blue-600/60 hover:border-cyan-400/70 transition-all duration-300 hover:shadow-md hover:shadow-cyan-500/30"
+                    className="course-card"
                   >
                     {/* Gradient top bar */}
-                    <div className={`h-2 bg-gradient-to-r ${colorClass}`}></div>
+                    <div className={`course-gradient-bar !bg-gradient-to-r ${colorClass}`}></div>
 
-                    {/* Animated background on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-blue-500/5 group-hover:from-cyan-500/15 group-hover:to-blue-500/15 transition-colors duration-300"></div>
+                    {/* Card Overlay */}
+                    <div className="course-card-overlay"></div>
 
-                    <div className="relative py-3 z-10 lg:p-4 md:p-4 flex flex-col items-center text-center  justify-between">
-                      <div className={`sm:w-24 sm:h-24 lg:h-20 lg:w-20  rounded-2xl bg-gradient-to-br ${colorClass} flex items-center justify-center mb-6 shadow-md shadow-blue-900/60 group-hover:shadow-cyan-500/70 transition-all duration-300 transform group-hover:scale-110 group-hover:-rotate-6`}>
-                        <Icon className="h-14 w-12 py-2 sm:w-12 text-white" />
+                    <div className="course-card-content">
+                      <div className={`course-icon-box !bg-gradient-to-br ${colorClass}`}>
+                        <Icon className="course-icon" />
                       </div>
 
                       <div>
-                        <h3 className="text-2xl font-black text-white mb-2">{course.name}</h3>
-                        <p className="text-blue-300 text-sm mb-6">Master this in-demand course</p>
+                        <h3 className="course-card-title">{course.name}</h3>
+                        <p className="course-card-subtitle">Master this in-demand course</p>
                       </div>
 
                       {course.name !== 'BCA' && course.name !== 'MCA' ? (
                         <Link
                           to={`/course/${course._id}/branches`}
-                          className="group/btn relative inline-flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-cyan-400 to-blue-400 text-black font-bold rounded-lg hover:shadow-md transition-all duration-300"
+                          className="course-card-button"
                         >
                           <span>Explore</span>
-                          <ArrowRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
+                          <ArrowRight className="h-4 w-4" />
                         </Link>
                       ) : (
-                        <div className="px-4 py-2 bg-blue-700/40 text-blue-300 rounded-lg text-sm">Coming Soon</div>
+                        <div className="course-card-coming-soon">Coming Soon</div>
                       )}
                     </div>
                   </div>
@@ -223,55 +224,51 @@ const Home = () => {
       </div>
 
       {/* CTA Section */}
-      <div className="relative py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-blue-700/60 via-cyan-700/60 to-blue-700/60 border border-blue-500/60 rounded-3xl p-12 backdrop-blur-md hover:border-cyan-400/80 transition-colors">
-            <div className="text-5xl mb-4">⚡</div>
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-6">Ready to Code Like a Pro?</h2>
-            <p className="text-xl text-blue-100 mb-8">Join 50K+ learners building amazing projects and landing dream jobs</p>
-            <button className="group relative px-10 py-4 bg-gradient-to-r from-cyan-400 to-blue-400 text-black font-bold text-lg rounded-xl hover:shadow-lg hover:shadow-cyan-500/50 transition-all duration-300 hover:scale-105">
-              <span className="relative z-10 flex items-center justify-center space-x-2">
-                <Link to={'/code-compiler'} >🚀 Start Code Today</Link>
-              </span>
-            </button>
-          </div>
+      <div className="cta-section">
+        <div className="cta-card">
+          <div className="cta-emoji">⚡</div>
+          <h2 className="cta-title">Ready to Code Like a Pro?</h2>
+          <p className="cta-description">Join 50K+ learners building amazing projects and landing dream jobs</p>
+          <Link to={'/code-compiler'} className="cta-button">
+            🚀 Start Code Today
+          </Link>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-blue-700 bg-gradient-to-b from-blue-900/80 to-black py-12 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+      <footer className="footer-section">
+        <div className="max-w-7xl mx-auto">
+          <div className="footer-grid">
             <div>
-              <h4 className="text-white font-bold mb-4">Product</h4>
-              <ul className="space-y-2 text-blue-200">
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">Courses</a></li>
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">Pricing</a></li>
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">Features</a></li>
+              <h4 className="footer-column-title">Product</h4>
+              <ul>
+                <li><a href="#" className="footer-link">Courses</a></li>
+                <li><a href="#" className="footer-link">Pricing</a></li>
+                <li><a href="#" className="footer-link">Features</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-bold mb-4">Learn</h4>
-              <ul className="space-y-2 text-blue-200">
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">Blog</a></li>
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">Docs</a></li>
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">FAQ</a></li>
+              <h4 className="footer-column-title">Learn</h4>
+              <ul>
+                <li><a href="#" className="footer-link">Blog</a></li>
+                <li><a href="#" className="footer-link">Docs</a></li>
+                <li><a href="#" className="footer-link">FAQ</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-bold mb-4">Company</h4>
-              <ul className="space-y-2 text-blue-200">
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">About</a></li>
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">Careers</a></li>
+              <h4 className="footer-column-title">Company</h4>
+              <ul>
+                <li><a href="#" className="footer-link">About</a></li>
+                <li><a href="#" className="footer-link">Contact</a></li>
+                <li><a href="#" className="footer-link">Careers</a></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-bold mb-4">Legal</h4>
-              <ul className="space-y-2 text-blue-200">
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">Terms</a></li>
-                <li><a href="#" className="hover:text-cyan-300 transition-colors">License</a></li>
+              <h4 className="footer-column-title">Legal</h4>
+              <ul>
+                <li><a href="#" className="footer-link">Privacy</a></li>
+                <li><a href="#" className="footer-link">Terms</a></li>
+                <li><a href="#" className="footer-link">License</a></li>
               </ul>
             </div>
           </div>

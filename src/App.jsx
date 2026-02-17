@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ChatProvider } from './context/ChatContext';
 import { lazy, Suspense } from 'react';
 import CreateCourse from './pages/Create-course';
 import CreateBranch from './pages/Create-branch';
@@ -22,6 +23,7 @@ const PaperDetail = lazy(() => import('./pages/PaperDetail'));
 const UploadPaper = lazy(() => import('./pages/UploadPaper'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const Chat = lazy(() => import('./pages/Chat'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -53,8 +55,9 @@ function AppRoutes() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
       <Navbar/>
-        <ButtomNav/>
+         <ButtomNav/>
       <Routes>
+        
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -68,6 +71,15 @@ function AppRoutes() {
         <Route path="/aichat" element={<ChatWidget />} />
         <Route path="/paperview" element={<ViewPaper />} />
         <Route path="/solvepaper" element={<SolvePaper />} />
+       
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <Chat />
+            </ProtectedRoute>
+          }
+        />
         <Route  
           path="/upload"
           element={
@@ -102,33 +114,35 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen bg-gray-50">
-          <AppRoutes />
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-              success: {
+        <ChatProvider>
+          <div className="min-h-screen bg-gray-50">
+            <AppRoutes />
+            <Toaster 
+              position="top-right"
+              toastOptions={{
                 duration: 3000,
-                iconTheme: {
-                  primary: '#4ade80',
-                  secondary: '#fff',
+                style: {
+                  background: '#363636',
+                  color: '#fff',
                 },
-              },
-              error: {
-                duration: 4000,
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
+                success: {
+                  duration: 3000,
+                  iconTheme: {
+                    primary: '#4ade80',
+                    secondary: '#fff',
+                  },
                 },
-              },
-            }}
-          />
-        </div>
+                error: {
+                  duration: 4000,
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: '#fff',
+                  },
+                },
+              }}
+            />
+          </div>
+        </ChatProvider>
       </AuthProvider>
     </Router>
   );

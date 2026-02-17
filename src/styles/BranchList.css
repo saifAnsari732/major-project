@@ -1,0 +1,378 @@
+/* ========================================
+   BRANCH LIST PAGE STYLES - NEUMORPHIC
+   ======================================== */
+
+@import './Neumorphism.css';
+
+.branch-list-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  padding: 20px;
+}
+
+@media (max-width: 640px) {
+  .branch-list-container {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .branch-list-container {
+    padding: 32px;
+  }
+}
+
+/* ===== PAGE HEADER ===== */
+
+.branch-header {
+  max-width: 1200px;
+  margin: 0 auto 32px;
+  text-align: center;
+}
+
+.branch-page-title {
+  font-size: 32px;
+  font-weight: 900;
+  color: #333333;
+  margin-bottom: 12px;
+}
+
+.branch-page-subtitle {
+  font-size: 16px;
+  color: #666666;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .branch-page-title {
+    font-size: 24px;
+  }
+
+  .branch-page-subtitle {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .branch-page-title {
+    font-size: 40px;
+    margin-bottom: 16px;
+  }
+
+  .branch-page-subtitle {
+    font-size: 18px;
+  }
+}
+
+/* ===== STATS GRID ===== */
+
+.branch-stats-grid {
+  display: grid;
+  gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto 32px;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 1025px) {
+  .branch-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+/* ===== BRANCH CARDS GRID ===== */
+
+.branch-cards-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.branch-cards-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 641px) {
+  .branch-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .branch-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+}
+
+/* ===== INDIVIDUAL BRANCH CARD ===== */
+
+.branch-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  box-shadow:
+    0 2px 8px rgba(80, 100, 130, 0.15),
+    0 8px 16px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  position: relative;
+}
+
+.branch-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.08));
+  transition: height 0.3s ease;
+  z-index: 0;
+}
+
+.branch-card:hover {
+  transform: translateY(-8px);
+  box-shadow:
+    0 8px 20px rgba(80, 100, 130, 0.2),
+    0 16px 32px rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.branch-card:hover::before {
+  height: 100%;
+}
+
+/* ===== BRANCH CARD HEADER ===== */
+
+.branch-card-header {
+  height: 4px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+/* ===== BRANCH CARD CONTENT ===== */
+
+.branch-card-body {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 640px) {
+  .branch-card-body {
+    padding: 16px;
+  }
+}
+
+/* ===== BRANCH ICON & NAME ===== */
+
+.branch-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.branch-card-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  transition: all 0.3s ease;
+}
+
+.branch-card:hover .branch-card-icon {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.25));
+  transform: scale(1.1);
+}
+
+.branch-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333333;
+  margin: 0;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.branch-card:hover .branch-card-title {
+  color: #667eea;
+}
+
+/* ===== BRANCH DESCRIPTION ===== */
+
+.branch-card-description {
+  font-size: 13px;
+  color: #666666;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.branch-card:hover .branch-card-description {
+  color: #555555;
+}
+
+/* ===== BRANCH FOOTER ===== */
+
+.branch-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  margin-top: 12px;
+  transition: all 0.3s ease;
+}
+
+.branch-card:hover .branch-card-footer {
+  border-top-color: rgba(102, 126, 234, 0.2);
+}
+
+.branch-paper-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.branch-explore-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.branch-explore-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+}
+
+.branch-explore-btn:active {
+  transform: translateY(0);
+}
+
+/* ===== EMPTY STATE ===== */
+
+.branch-empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.branch-empty-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  opacity: 0.6;
+}
+
+.branch-empty-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #333333;
+  margin-bottom: 8px;
+}
+
+.branch-empty-text {
+  font-size: 14px;
+  color: #666666;
+  margin: 0;
+}
+
+/* ===== LOADING STATE ===== */
+
+.branch-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.branch-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(102, 126, 234, 0.2);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== RESPONSIVE ADJUSTMENTS ===== */
+
+@media (max-width: 640px) {
+  .branch-card-body {
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .branch-card-title {
+    font-size: 16px;
+  }
+
+  .branch-card-description {
+    font-size: 12px;
+  }
+
+  .branch-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+}
+
+/* ===== ACCESSIBILITY ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  .branch-card,
+  .branch-card-icon,
+  .branch-explore-btn {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* ===== PRINT STYLES ===== */
+
+@media print {
+  .branch-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+  }
+}

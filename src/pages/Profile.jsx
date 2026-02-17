@@ -3,15 +3,22 @@ import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { 
   User, Mail, MapPin, Phone, Edit2, Save, X,
-  FileText, Coins, Calendar, TrendingUp
+  FileText, Coins, Calendar, TrendingUp, MessageSquare, Search, Loader
 } from 'lucide-react';
+import Chat from '../pages/Chat';
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
   const [myPapers, setMyPapers] = useState([]);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     bio: user?.bio || '',
@@ -40,6 +47,53 @@ const Profile = () => {
     } catch (error) {
       console.error('Failed to fetch papers:', error);
     }
+  };
+
+  // Search users for chat
+  useEffect(() => {
+    const searchUsers = async () => {
+      if (searchQuery.trim().length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setSearchLoading(true);
+      try {
+        const { data } = await api.get('/chat/search/users', {
+          params: { query: searchQuery }
+        });
+        setSearchResults(data.users || []);
+      } catch (error) {
+        console.error('Search failed:', error);
+        toast.error('Failed to search users');
+      } finally {
+        setSearchLoading(false);
+      }
+    };
+
+    const timer = setTimeout(searchUsers, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Start chat with a user
+  const handleStartChat = (selectedUser) => {
+    setShowChatModal(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    
+    // Create conversation ID (sorted to ensure consistency)
+    const ids = [user._id, selectedUser._id].sort();
+    const conversationId = `${ids[0]}-${ids[1]}`;
+    
+    // Navigate to chat page
+    navigate('/chat');
+    
+    // Trigger chat context to open this conversation
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('openChat', { 
+        detail: { conversationId, userId: selectedUser._id } 
+      }));
+    }, 100);
   };
 
   const handleChange = (e) => {
@@ -123,6 +177,7 @@ const Profile = () => {
                     />
                   </div>
                 )}
+                {/* <Chat/> */}
               </div>
 
               <div className="space-y-4 mb-6">
@@ -201,9 +256,20 @@ const Profile = () => {
                   </button>
                 </div>
               )}
-            </div>
-          </div>
 
+              {!editing && (
+                <button
+                  onClick={() => setShowChatModal(true)}
+                  className="w-full mt-3 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white py-2 rounded-lg transition-all duration-200 flex items-center justify-center"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Start Chat
+                </button>
+              )}
+
+            </div>
+
+          </div>
           {/* Stats and Papers */}
           <div className="lg:col-span-2 space-y-6">
             {/* Stats Grid */}
@@ -280,6 +346,94 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      {/* Chat User List Modal */}
+      {showChatModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-white">Start Chat</h3>
+                <p className="text-purple-100 text-sm">Select a user to message</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowChatModal(false);
+                  setSearchQuery('');
+                  setSearchResults([]);
+                }}
+                className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-2 transition-all"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Search Box */}
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center bg-gray-100 rounded-lg px-4 py-2">
+                <Search className="h-5 w-5 text-gray-400 mr-2" />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 bg-transparent outline-none text-gray-700 placeholder-gray-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Users List */}
+            <div className="flex-1 overflow-y-auto">
+              {searchLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <Loader className="h-6 w-6 text-purple-500 animate-spin" />
+                </div>
+              )}
+
+              {!searchLoading && searchQuery.trim().length === 0 && (
+                <div className="p-6 text-center">
+                  <Search className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">Type to search users</p>
+                </div>
+              )}
+
+              {!searchLoading && searchQuery.trim().length > 0 && searchResults.length === 0 && (
+                <div className="p-6 text-center">
+                  <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No users found</p>
+                </div>
+              )}
+
+              {!searchLoading && searchResults.length > 0 && (
+                <div className="divide-y divide-gray-200">
+                  {searchResults.map((foundUser) => (
+                    <div
+                      key={foundUser._id}
+                      onClick={() => handleStartChat(foundUser)}
+                      className="p-4 hover:bg-purple-50 cursor-pointer transition-colors duration-150 flex items-center justify-between group"
+                    >
+                      <div className="flex items-center flex-1">
+                        <img
+                          src={foundUser.profileImage || 'https://via.placeholder.com/40'}
+                          alt={foundUser.name}
+                          className="h-10 w-10 rounded-full object-cover border-2 border-purple-200"
+                        />
+                        <div className="ml-3 flex-1">
+                          <p className="font-semibold text-gray-900">{foundUser.name}</p>
+                          <p className="text-sm text-gray-500">{foundUser.email}</p>
+                        </div>
+                      </div>
+                      <MessageSquare className="h-5 w-5 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
