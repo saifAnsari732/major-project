@@ -18,27 +18,35 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  },[]);
 
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
       if (token) {
         const { data } = await api.get('/auth/me');
+        // console.log(data.data._id);
+        // localStorage.setItem('userid', JSON.stringify(data.data._id));
         setUser(data.data);
       }
     } catch (error) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('userid');
     } finally {
       setLoading(false);
     }
   };
 
+  
+
+
   const login = async (email, password) => {
     try {
       const { data } = await api.post('/auth/login', { email, password });
       localStorage.setItem('token', data.data.token);
+      localStorage.setItem('userid', data.data._id);
+      // console.log(data.data._id);
       setUser(data.data);
       toast.success('Login successful!');
       return data.data;
@@ -88,6 +96,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    checkAuth,
     login,
     register,
     logout,

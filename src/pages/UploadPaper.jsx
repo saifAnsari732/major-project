@@ -6,6 +6,9 @@ import toast from 'react-hot-toast';
 import { Upload, FileText } from 'lucide-react';
 
 const UploadPaper = () => {
+  const userId = localStorage.getItem('userid');
+
+
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -20,7 +23,7 @@ const UploadPaper = () => {
     semester: 1,
     paperfileimage: null,
     solvepaperfile: null,
-    uploadedBy: '',
+    uploadedBy: userId,
   });
 
   useEffect(() => {
@@ -36,6 +39,7 @@ const UploadPaper = () => {
   const fetchCourses = async () => {
     try {
       const { data } = await api.get('/courses');
+      // console.log(data.data);
       setCourses(data.data);
     } catch (error) {
       toast.error('Failed to fetch courses');
@@ -76,7 +80,7 @@ const UploadPaper = () => {
       return;
     }
 
-    console.log("Form data before submit:", formData);
+    // console.log("Form data before submit:", formData);
 
     try {
       const payload = new FormData();
@@ -94,27 +98,16 @@ const UploadPaper = () => {
       // Ensure paper file is appended correctly
       if (formData.paperfileimage) {
         payload.append('paperFile', formData.paperfileimage);
-        console.log('Paper file being uploaded:', formData.paperfileimage.name);
+        // console.log('Paper file being uploaded:', formData.paperfileimage.name);
       }
 
-      // Append solve PDF if provided (optional) - FIXED: This should work now
-      if (formData.solvepaperfile) {
-        payload.append('solvePaperFile', formData.solvepaperfile);
-        console.log('Solve PDF being uploaded:', formData.solvepaperfile.name);
-      }
-
-      // Debug: Log FormData contents
-      console.log('FormData contents:');
-      for (let pair of payload.entries()) {
-        console.log(pair[0] + ':', pair[1]);
-      }
 
       const response = await api.post('/papers', payload, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-
+     console.log("Upload response:",response.data);
       toast.success('Paper uploaded successfully');
       // navigate('/profile');
     } catch (error) {
@@ -125,6 +118,8 @@ const UploadPaper = () => {
     }
   };
 
+
+ 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
       {/* <Navbar /> */}
@@ -177,20 +172,21 @@ const UploadPaper = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Paper Code *
-                </label>
-                <input
-                  type="text"
-                  name="papercode"
-                  required
-                  value={formData.papercode}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-                  placeholder="e.g., BTH-CS-266"
-                />
-              </div>
+             
+            </div>
+            {/* paper code */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Paper Code
+              </label>
+              <input
+                type="text"
+                name="papercode"
+                value={formData.papercode}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                placeholder="e.g., DS-MIDTERM-2024"
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -307,7 +303,7 @@ const UploadPaper = () => {
               </div>
             </div>
             {/* solve pdf file */}
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Upload Solve PDF (Optional)
               </label>
@@ -325,7 +321,7 @@ const UploadPaper = () => {
                   </p>
                 )}
               </div>
-            </div>
+            </div> */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-start">
                 <FileText className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
