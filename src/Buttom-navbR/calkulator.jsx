@@ -10,7 +10,7 @@ const Calculator = () => {
   const [history, setHistory] = useState([]);
   const [angleMode, setAngleMode] = useState('DEG'); // DEG, RAD, GRAD
 
-  // Handle button press
+  // Handle button press   
   const handleButtonPress = (value) => {
     if (value === 'SHIFT') {
       setIsShift(!isShift);
