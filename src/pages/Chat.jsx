@@ -379,8 +379,8 @@ const Chat = () => {
                               Sent  → "You"       (so the sender knows it's theirs)
                               Received → actual sender name from message.senderName */}
                           <span className="message-sender-name">
-                            {isSent ? 'You' : senderName}
-                          </span>
+                            {isSent ? <p>You</p> : senderName}
+                          </span>     
 
                           <p>{message.message}</p>
                           <div className="message-meta">
