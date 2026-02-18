@@ -41,7 +41,7 @@ const ViewPaper = () => {
               </svg>
             </button>
             <span className="text-white min-w-12 text-center">{zoom}%</span>
-            <button
+            <button    
               onClick={handleZoomIn}
               className="text-white hover:text-blue-400 transition p-1"
               title="Zoom In"
