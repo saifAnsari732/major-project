@@ -946,6 +946,7 @@
     flex: 1;
     min-height: 0;
     height: 70%;
+    margin-top: 10px;
   }
 
   .message { max-width: 88%; }

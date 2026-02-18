@@ -122,8 +122,6 @@ const Chat = () => {
     }
   };
 
-  // ✅ FIX: Send message — removed misplaced console.log that broke flow,
-  // added guard so selectedUserId is always derived from current state before send.
   const handleSendMessage = async (e) => {
     e.preventDefault();
 
@@ -150,13 +148,14 @@ const Chat = () => {
       ? { replyTo: { _id: replyTo._id, message: replyTo.message, senderName: replyTo.senderName } }
       : {};
 
-    // Optimistic UI — show message immediately before server confirms
+    // ✅ FIX: Include senderName in optimistic message so your name shows immediately on sent bubble
     const optimisticMessage = {
       _id: `temp-${Date.now()}`,
       conversationId: currentConversation,
       senderId: userId,
-      senderName: userName,
+      senderName: userName,        // ← your name goes here
       recipientId: selectedUserId,
+      recipientName: selectedUser.name,
       message: messageToSend,
       messageType: 'text',
       timestamp: new Date(),
@@ -170,7 +169,7 @@ const Chat = () => {
     sendStopTyping(currentConversation);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
-    // Send via socket — delivers to BOTH sender's echo and recipient's screen
+    // Send via socket
     sendMessage({
       conversationId: currentConversation,
       recipientId: selectedUserId,
@@ -182,16 +181,12 @@ const Chat = () => {
 
     // Persist to DB
     try {
-      const response = await api.post('/chat/send', {
+      await api.post('/chat/send', {
         recipientId: selectedUserId,
         message: messageToSend,
         messageType: 'text',
         ...replyContext
       });
-      // if (response.data.success) {
-        // Refresh conversations list to show latest message in sidebar
- 
-      
     } catch (error) {
       console.error('❌ Error saving message:', error);
     }
@@ -256,7 +251,7 @@ const Chat = () => {
   return (
     <div className="chat-container">
       {/* ── Sidebar ── */}
-      <div className="chat-sidebar  ">
+      <div className="chat-sidebar">
         <div className="chat-header">
           <h2 className="chat-title">Messages</h2>
         </div>
@@ -280,7 +275,7 @@ const Chat = () => {
                 onClick={() => handleStartChat(user)}
               >
                 <NameAvatar name={user.name} size={40} />
-                <div className="conversation-content ">
+                <div className="conversation-content">
                   <p className="conversation-name">{user.name}</p>
                   <p className="conversation-last-message">{user.email}</p>
                 </div>
@@ -345,7 +340,13 @@ const Chat = () => {
               ) : (
                 messages.map((message, idx) => {
                   const isSent = message.senderId?.toString() === currentUserId?.toString();
-                  const senderName = isSent ? currentUserName : (currentRecipient?.name || 'User');
+
+                  // ✅ FIX 1: Use message.senderName (from DB/socket) as the primary source.
+                  // The backend always stores senderName, so this works reliably for BOTH
+                  // sent (your name) and received (their name) messages.
+                  const senderName = isSent
+                    ? (message.senderName || currentUserName)
+                    : (message.senderName || currentRecipient?.name || 'User');
 
                   return (
                     <div
@@ -354,7 +355,7 @@ const Chat = () => {
                       onMouseEnter={() => setHoveredMessageId(message._id)}
                       onMouseLeave={() => setHoveredMessageId(null)}
                     >
-                      {/* Show name initial avatar for received messages */}
+                      {/* Avatar for received messages */}
                       {!isSent && (
                         <NameAvatar
                           name={senderName}
@@ -374,10 +375,13 @@ const Chat = () => {
                         )}
 
                         <div className="message-bubble">
-                          {/* Sender name for received messages */}
-                          {!isSent && (
-                            <span className="message-sender-name">{senderName}</span>
-                          )}
+                          {/* ✅ FIX 2: Show name on BOTH sent AND received bubbles.
+                              Sent  → "You"       (so the sender knows it's theirs)
+                              Received → actual sender name from message.senderName */}
+                          <span className="message-sender-name">
+                            {isSent ? 'You' : senderName}
+                          </span>
+
                           <p>{message.message}</p>
                           <div className="message-meta">
                             <span className="message-time">
@@ -397,7 +401,6 @@ const Chat = () => {
                         {/* Action buttons on hover */}
                         {hoveredMessageId === message._id && (
                           <div className={`message-actions ${isSent ? 'actions-sent' : 'actions-received'}`}>
-                            {/* Reply button for ALL messages */}
                             <button
                               className="action-btn reply-btn"
                               onClick={() => {
@@ -412,7 +415,6 @@ const Chat = () => {
                               <Reply size={14} />
                             </button>
 
-                            {/* Delete only your own saved messages */}
                             {isSent && !message._id?.startsWith('temp-') && (
                               <button
                                 className="action-btn delete-btn"
@@ -431,7 +433,7 @@ const Chat = () => {
                         )}
                       </div>
 
-                      {/* Sent message avatar */}
+                      {/* Avatar for sent messages */}
                       {isSent && (
                         <NameAvatar
                           name={currentUserName}
