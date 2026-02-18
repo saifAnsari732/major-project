@@ -7,7 +7,7 @@ const ChatWidget = () => {
   const [messages, setMessages] = useState([
     { id: 1, text: "Hi there! 👋", sender: "bot" },
     { id: 2, text: "Start a chat. We're here to help you 24/7.", sender: "bot" },
-    { id: 3, text: "My name is SAVS Bot. How can I assist you today?", sender: "bot" }
+    { id: 3, text: "My name is Code Bot. How can I assist you today?", sender: "bot" }
   ]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -39,7 +39,7 @@ const ChatWidget = () => {
       id: prev.length + 1,
       text: userMessage || (selectedFile ? `📎 ${selectedFile.name}` : 'Question...'),
       sender: 'user',
-      timestamp: new Date().toISOString()
+      // timestamp: new Date().toISOString()
     }]);
 
     // Clear input and file
@@ -169,12 +169,12 @@ const ChatWidget = () => {
 
           {/* Messages Body */}
           <div className="chat-body">
-            <div className="welcome-bubble">
+            {/* <div className="welcome-bubble">
               <div className="welcome-text">
                  Hi there!
               </div>
               <p className="welcome-subtext">Start a chat. We're here to help you 24/7.</p>
-            </div>
+            </div> */}
             
             <div className="messages-container">
               {messages.map((message) => (
@@ -209,7 +209,7 @@ const ChatWidget = () => {
                     )}
                     {message.sender === 'user' && (
                       <span className="message-time">
-                        {message.timestamp ? formatTime(message.timestamp) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {message.timestamp ? formatTime(message.timestamp) : ''}
                       </span>
                     )}
                   </div>
@@ -220,7 +220,7 @@ const ChatWidget = () => {
               {isLoading && (
                 <div className="message-wrapper bot-message-wrapper">
                   <div className="bot-avatar">
-                    <span>N</span>
+                    <span>S</span>
                   </div>
                   <div className="message-bubble bot-message">
                     <div className="typing-indicator">

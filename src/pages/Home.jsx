@@ -135,9 +135,9 @@ const Home = () => {
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </button>
-            <button className="px-8 py-4 border-2 border-cyan-400 text-cyan-300 font-bold rounded-xl hover:bg-blue-900/50 transition-all duration-300 hover:scale-105 text-lg">
-              📚 Explore Courses
-            </button>
+            <Link to={'/calculator'} className="px-8 py-4 border-2 border-cyan-400 text-cyan-300 font-bold rounded-xl hover:bg-blue-900/50 transition-all duration-300 hover:scale-105 text-lg">
+             Explore Calculator
+            </Link>
           </div>
 
           {/* Stats Section */}

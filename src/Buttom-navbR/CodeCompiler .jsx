@@ -201,7 +201,6 @@ console.log(response.data);
 
       <div className="cc-wrap">
         <header className="cc-header">
-          <div className="cc-header-badge"><Code2 size={18} /><span>SAVS</span></div>
           <h1 className="cc-title">Code Compiler</h1>
           <p className="cc-sub">Write · Compile · Execute in real-time</p>
         </header>
