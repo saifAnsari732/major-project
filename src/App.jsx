@@ -72,7 +72,7 @@ function AppRoutes() {
         <Route path="/paperview" element={<ViewPaper />} />
         <Route path="/solvepaper" element={<SolvePaper />} />
        
-        <Route
+        <Route   
           path="/chat"
           element={
             <ProtectedRoute>

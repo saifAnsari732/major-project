@@ -256,7 +256,7 @@ const Chat = () => {
   return (
     <div className="chat-container">
       {/* ── Sidebar ── */}
-      <div className="chat-sidebar">
+      <div className="chat-sidebar  ">
         <div className="chat-header">
           <h2 className="chat-title">Messages</h2>
         </div>
@@ -279,8 +279,8 @@ const Chat = () => {
                 className={`conversation-item ${selectedUserId === user._id ? 'active' : ''}`}
                 onClick={() => handleStartChat(user)}
               >
-                <NameAvatar name={user.name} size={44} />
-                <div className="conversation-content">
+                <NameAvatar name={user.name} size={40} />
+                <div className="conversation-content ">
                   <p className="conversation-name">{user.name}</p>
                   <p className="conversation-last-message">{user.email}</p>
                 </div>
