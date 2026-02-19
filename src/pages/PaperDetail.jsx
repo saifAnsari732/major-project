@@ -18,11 +18,12 @@ const PaperDetail = () => {
   const fetchPaper = async () => {
     try {
       const { data } = await api.get(`/papers/${paperId}`);
+      console.log("vxdfdddddddata.data", data.data.uploadedBy);
       setPaper(data.data);
-      localStorage.setItem('currentPaper', data.data.paperFile.url); // Store paper details in localStorage
-      console.log(data.data.paperFile.url);
+      localStorage.setItem('currentPaper', data.data.paperFile.url); 
+      localStorage.setItem('backpaper', data.data.backSideFile.url); 
     } catch (error) {
-      toast.error('Failed to fetch paper details');
+    console.log(error);
     } finally {
       setLoading(false);
     }
@@ -137,7 +138,7 @@ const PaperDetail = () => {
                     <User className="h-4 w-4 mr-2" />
                     Uploaded By:
                   </span>
-                  <span className="font-semibold text-gray-900">{paper.uploadedBy?.name}</span>
+                  <span className="font-semibold text-gray-900">{paper?.uploadedBy?.name || "Unknown User"}</span>
                 </div>
               </div>
             </div>

@@ -33,19 +33,19 @@ const SolvePaper = () => {
     }
   };
 
-  const handleMouseDown = (e) => {
-    if (zoom > 100) {
-      setIsDragging(true);
-      setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
-    }
-  };
+  // const handleMouseDown = (e) => {
+  //   if (zoom > 100) {
+  //     setIsDragging(true);
+  //     setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+  //   }
+  // };
 
-  const handleMouseMove = (e) => {
-    if (isDragging && zoom > 100) {
-      setPanX(e.clientX - dragStart.x);
-      setPanY(e.clientY - dragStart.y);
-    }
-  };
+  // const handleMouseMove = () => {
+  //   if (isDragging && zoom > 100) {
+  //     setPanX(e.clientX - dragStart.x);
+  //     setPanY(e.clientY - dragStart.y);
+  //   }
+  // };
 
   const handleMouseUp = () => {
     setIsDragging(false);
@@ -140,11 +140,11 @@ const SolvePaper = () => {
       <div
         ref={containerRef}
         className="flex-1 overflow-hidden flex items-center justify-center bg-black relative cursor-grab active:cursor-grabbing"
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        // onWheel={handleWheel}
+        // onMouseDown={handleMouseDown}
+        // onMouseMove={handleMouseMove}
+        // onMouseUp={handleMouseUp}
+        // onMouseLeave={handleMouseUp}
       >
         <div className="flex items-center justify-center w-full h-full">
           <img

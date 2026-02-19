@@ -2,6 +2,40 @@
   position: relative;
 }
 
+.notification-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s ease;
+}
+
+.notification-item:hover {
+  background: #f8f6ff; /* ✅ hover effect */
+}
+
+.notification-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.notification-sender {
+  font-weight: 600;
+  font-size: 13px;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.notification-message {
+  font-size: 12px;
+  color: #666;
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .chat-notification-btn {
   position: relative;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

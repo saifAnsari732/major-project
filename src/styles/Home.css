@@ -631,14 +631,19 @@
 
 .footer-grid {
   display: grid;
-  gap: 32px;
+  /* gap: 2px; */
   max-width: 1400px;
   margin: 0 auto 32px;
 }
 
 @media (min-width: 641px) {
   .footer-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (max-width: 441px) {
+  .footer-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 

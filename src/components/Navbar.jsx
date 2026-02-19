@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Menu, X, Home, Upload, User, LogOut, Shield, BookOpen } from 'lucide-react';
 import ChatWidget from '../Buttom-navbR/AI';
+import ChatNotification from './ChatNotification';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,7 +14,9 @@ const Navbar = () => {
     await logout();
     navigate('/login');
   };
-
+//  console.log("object",user.name.split(" ")[0]);
+//  var mn=user?.name.split(" ")[0];
+//  console.log(mn);
   return (
     <nav className="bg-gradient-to-r to-black via-blue-900 from-blue-900 shadow-md sticky top-0 z-50 border-b border-blue-700/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -72,13 +75,14 @@ const Navbar = () => {
                   <div className="relative">
                     <img
                       src={user?.profileImage || 'https://via.placeholder.com/40'}
-                      alt={user?.name}
+                      alt={user?.name?.split(" ")[0]}
                       className="h-8 w-8 rounded-full border-2 border-cyan-300"
                     />
                     {user?.isOnline && (
                       <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-400 border-2 border-black"></span>
                     )}
                   </div>
+                    <ChatNotification/>
                   <span className="text-blue-100 text-sm">{user?.name}</span>
                 </div>
                 <button

@@ -163,8 +163,8 @@ export const ChatProvider = ({ children }) => {
   // Handle new message notifications (badge count)
   useEffect(() => {
     const handleNewMessageNotification = (notification) => {
-      setUnreadCount((prev) => prev + 1);
-      setNotifications((prev) => [notification, ...prev]);
+      // setUnreadCount((prev) => prev + 1);
+      // setNotifications((prev) => [notification, ...prev]);
     };
 
     onNewMessageNotification(handleNewMessageNotification);

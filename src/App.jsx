@@ -12,6 +12,8 @@ import Navbar from './components/Navbar';
 import ChatWidget from './Buttom-navbR/AI';
 import ViewPaper from './pages/View-paper';
 import SolvePaper from './pages/Solvepaper';
+import CoursePapers from './pages/CoursePapers';
+// import { ChatProvider } from './context/ChatContext'; // ✅
 
 // Lazy load components for better performance
 const Home = lazy(() => import('./pages/Home'));
@@ -54,6 +56,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 function AppRoutes() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
+      <ChatProvider> 
       <Navbar/>
          <ButtomNav/>
       <Routes>
@@ -71,6 +74,7 @@ function AppRoutes() {
         <Route path="/aichat" element={<ChatWidget />} />
         <Route path="/paperview" element={<ViewPaper />} />
         <Route path="/solvepaper" element={<SolvePaper />} />
+        <Route path="/course/:courseId/papers" element={<CoursePapers />} />
        
         <Route   
           path="/chat"
@@ -105,7 +109,7 @@ function AppRoutes() {
           }
         />
       </Routes>
-
+</ChatProvider>
     </Suspense>
   );
 }

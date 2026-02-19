@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 
 const ViewPaper = () => {
     const paperUrl = localStorage.getItem('currentPaper')
+    const backPaperUrl = localStorage.getItem('backpaper')
   const imageUrl = paperUrl 
+  const backImageUrl = backPaperUrl
 //   console.log(imageUrl);
   const [zoom, setZoom] = useState(100);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -79,23 +81,52 @@ const ViewPaper = () => {
       </div>
 
       {/* Image Display Area */}
-      <div className="flex-1 overflow-auto flex items-center justify-center bg-black relative">
-        <div className="flex items-center justify-center min-h-full">
-          <img
-            src={imageUrl}
-            alt="Paper Document"
-            style={{
-              transform: `scale(${zoom / 100})`,
-              maxHeight: '90vh',
-              maxWidth: '95vw',
-              objectFit: 'contain',
-              transition: 'transform 0.3s ease-out'
-            }}
-            className="shadow-2xl"
-            loading="lazy"
-          />
-        </div>
-      </div>
+<div className="flex-1 flex items-center justify-center bg-black relative">
+  <div className={`
+    flex 
+    flex-col 
+    sm:flex-row 
+    items-center 
+    justify-center 
+    gap-4 
+    min-h-full 
+    p-4
+  `}>
+    {/* Front Paper Image */}
+    <div className="flex items-center justify-center">
+      <img
+        src={imageUrl}
+        alt="Paper Document"
+        style={{
+          transform: `scale(${zoom / 100})`,
+          maxHeight: '80vh',
+          maxWidth: '95vw',
+          objectFit: 'contain',
+          transition: 'transform 0.3s ease-out'
+        }}
+        className="shadow-2xl"
+        loading="lazy"
+      />
+    </div>
+    
+    {/* Back Paper Image */}
+    <div className="flex items-center justify-center">
+      <img
+        src={backImageUrl}
+        alt="Back Paper Document"
+        style={{
+          transform: `scale(${zoom / 100})`,
+          maxHeight: '80vh',
+          maxWidth: '95vw',
+          objectFit: 'contain',
+          transition: 'transform 0.3s ease-out'
+        }}
+        className="shadow-2xl"
+        loading="lazy"
+      />
+    </div>
+  </div>
+</div>
 
       {/* Footer with Info */}
       <div className="bg-gray-800 border-t border-gray-700 px-6 py-3 text-gray-400 text-sm flex justify-between">

@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('userid', data.data._id);
       // console.log(data.data._id);
       setUser(data.data);
-      toast.success('Login successful!');
+      // toast.success('Login successful!');
       return data.data;
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
@@ -74,8 +74,10 @@ export const AuthProvider = ({ children }) => {
       await api.post('/auth/logout');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('currentPaper');
+      localStorage.removeItem('backpaper');
       setUser(null);
-      toast.success('Logged out successfully');
+      // toast.success('Logged out successfully');
     } catch (error) {
       console.error('Logout error:', error);
     }

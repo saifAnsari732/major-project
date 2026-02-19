@@ -142,12 +142,9 @@ const Profile = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
               <div className="text-center mb-6">
-                <div className="relative inline-block">
-                  <img
-                    src={formData.profileImage || 'https://via.placeholder.com/150'}
-                    alt={formData.name}
-                    className="w-32 h-32 rounded-full border-4 border-cyan-400 mx-auto mb-4"
-                  />
+                <div className="relative inline-block ">
+                  <h3 className="w-32 h-32 rounded-full border-4 border-cyan-400 mx-auto mb-4 pt-12 text-2xl font-serif font-semibold">{formData.name.split(" ")[0]}</h3>
+                
                   {user?.isOnline && (
                     <span className="absolute bottom-6 right-2 h-6 w-6 rounded-full bg-green-400 border-4 border-white"></span>
                   )}
@@ -293,7 +290,7 @@ const Profile = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-gray-600 text-sm">Coins Earned</p>
-                    <p className="text-2xl font-bold text-gray-900">{user?.coins || 0}</p>
+                    <p className="text-2xl font-bold text-gray-900">{user?.coins || 0}/2</p>
                   </div>
                 </div>
               </div>
