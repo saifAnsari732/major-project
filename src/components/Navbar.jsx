@@ -72,16 +72,12 @@ const Navbar = () => {
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <div className="relative">
-                    <img
-                      src={user?.profileImage || 'https://via.placeholder.com/40'}
-                      alt={user?.name?.split(" ")[0]}
-                      className="h-8 w-8 rounded-full border-2 border-cyan-300"
-                    />
+                  {/* <div className="relative">
+                    
                     {user?.isOnline && (
                       <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-400 border-2 border-black"></span>
                     )}
-                  </div>
+                  </div> */}
                     <ChatNotification/>
                   <span className="text-blue-100 text-sm">{user?.name}</span>
                 </div>
@@ -114,15 +110,22 @@ const Navbar = () => {
           {/* Mobile menu button */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden text-blue-100 hover:text-cyan-300"
-          >
-            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6 bg-gradient-to-br from-cyan-400 to-blue-400 text-black rounded-md" />}
+            className="md:hidden text-blue-100 hover:text-cyan-300 flex items-center space-x-1  flex-row-reverse "
+            >
+            {isOpen ? <X className="h-6 w-6 " /> : <Menu className="h-6 w-6 bg-gradient-to-br from-cyan-400 to-blue-400 text-black rounded-md " />}
+              <div className='flex flex-row-reverse px-4'>
+
+              <ChatNotification/>
+              </div>
+         
           </button>
+        
         </div>
 
         {/* Mobile Navigation */}
         {isOpen && (
           <div className="md:hidden pb-4 space-y-2 bg-black/40 rounded-lg p-4 py- ">
+            
             <Link
               to="/"
               className="block text-blue-100 hover:text-cyan-300 pl-2 border-r-2 rounded-lg  text-lg font-medium text-center"
@@ -134,7 +137,7 @@ const Navbar = () => {
               </div>
             </Link>
             
-            {isAuthenticated && (
+            {isAuthenticated &&  (
               <>
                 <Link
                   to="/upload"
@@ -203,6 +206,7 @@ const Navbar = () => {
             )}
           </div>
         )}
+
       </div>
       <ChatWidget/>
     </nav>

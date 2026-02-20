@@ -5,7 +5,6 @@ import {
   joinConversation,
   leaveConversation,
   onMessageReceived,
-  onMessageNotification,
   offMessageReceived,
   onUserTyping,
   onUserStoppedTyping,
@@ -15,15 +14,13 @@ import {
   onNewMessageNotification
 } from '../services/socketService';
 import { useAuth } from './AuthContext';
-import api from '../utils/api'; // ✅ FIX: Use shared api utility (has correct baseURL with /api prefix)
+import api from '../utils/api';
 
 const ChatContext = createContext();
 
 export const useChatContext = () => {
   const context = useContext(ChatContext);
-  if (!context) {
-    throw new Error('useChatContext must be used within ChatProvider');
-  }
+  if (!context) throw new Error('useChatContext must be used within ChatProvider');
   return context;
 };
 
@@ -36,41 +33,30 @@ export const ChatProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState([]);  // ✅ incoming only
   const [replyTo, setReplyTo] = useState(null);
 
-  // Refs to avoid stale closures in socket callbacks
   const currentConversationRef = useRef(null);
   const messagesRef = useRef([]);
 
-  useEffect(() => {
-    currentConversationRef.current = currentConversation;
-  }, [currentConversation]);
+  useEffect(() => { currentConversationRef.current = currentConversation; }, [currentConversation]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  // Initialize socket when user logs in
+  // Initialize socket
   useEffect(() => {
     if (user && token) {
       initializeSocket(token);
       fetchConversations();
       fetchUnreadCount();
-
-      return () => {
-        disconnectSocket();
-      };
+      return () => disconnectSocket();
     }
   }, [user, token]);
 
-  // ✅ FIX: Use api utility instead of raw axios — no more URL mismatch
   const fetchConversations = useCallback(async () => {
     try {
       setLoading(true);
       const response = await api.get('/chat/conversations');
       setConversations(response.data.conversations || []);
-      console.log('✅ Fetched conversations:', response.data.conversations);
     } catch (error) {
       console.error('❌ Error fetching conversations:', error.response?.data || error.message);
     } finally {
@@ -78,18 +64,17 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
-  // ✅ FIX: Use api utility — was using raw axios hitting wrong URL (missing /api prefix)
   const fetchChatHistory = useCallback(async (conversationId) => {
     try {
       setLoading(true);
       const response = await api.get(`/chat/history/${conversationId}`);
       const fetchedMessages = response.data.messages || [];
       setMessages(fetchedMessages);
-      console.log(`✅ Fetched ${fetchedMessages.length} messages for:`, conversationId);
       setCurrentConversation(conversationId);
       joinConversation(conversationId);
+      console.log(`✅ Fetched ${fetchedMessages.length} messages for:`, conversationId);
     } catch (error) {
-      console.log('ℹ️ No history found, starting fresh conversation:', conversationId);
+      console.log('ℹ️ No history — fresh conversation:', conversationId);
       setMessages([]);
       setCurrentConversation(conversationId);
       joinConversation(conversationId);
@@ -98,7 +83,6 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
-  // ✅ FIX: Use api utility
   const fetchUnreadCount = useCallback(async () => {
     try {
       const response = await api.get('/chat/unread-count');
@@ -108,7 +92,6 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
-  // ✅ FIX: Use api utility
   const searchUsers = useCallback(async (query) => {
     try {
       const response = await api.get('/chat/search/users', { params: { query } });
@@ -119,17 +102,21 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
-  // CORE: Handle incoming messages for BOTH sender and receiver
+  // ✅ CORE: Handle incoming socket messages
   useEffect(() => {
     const handleMessageReceived = (message) => {
       const activeChatId = currentConversationRef.current;
       const currentMessages = messagesRef.current;
+      const loggedInUserId = user?._id?.toString();
+
+      // ✅ Only show notification for INCOMING messages (not sent by me)
+      const isIncoming = message.senderId?.toString() !== loggedInUserId;
 
       if (activeChatId && message.conversationId === activeChatId) {
+        // Currently viewing this conversation → add to messages
         const realMessageExists = currentMessages.some(
           (msg) => msg._id === message._id && !msg._id?.startsWith('temp-')
         );
-
         if (realMessageExists) return;
 
         const matchingTempIndex = currentMessages.findIndex(
@@ -148,35 +135,36 @@ export const ChatProvider = ({ children }) => {
         } else {
           setMessages((prev) => [...prev, { ...message, isRead: true }]);
         }
-      } else {
-        setNotifications((prev) => [message, ...prev]);
+      } else if (isIncoming) {
+        // ✅ Not viewing this conversation + message is incoming → show notification
+        setNotifications((prev) => {
+          // Avoid duplicate notifications for same message
+          const alreadyExists = prev.some((n) => n._id === message._id);
+          if (alreadyExists) return prev;
+          return [message, ...prev];
+        });
         fetchUnreadCount();
       }
     };
 
     onMessageReceived(handleMessageReceived);
-    return () => {
-      offMessageReceived();
-    };
-  }, [fetchUnreadCount]);
+    return () => offMessageReceived();
+  }, [fetchUnreadCount, user?._id]);
 
-  // Handle new message notifications (badge count)
+  // New message notification (badge count)
   useEffect(() => {
     const handleNewMessageNotification = (notification) => {
-      // setUnreadCount((prev) => prev + 1);
-      // setNotifications((prev) => [notification, ...prev]);
+      // Handled above in handleMessageReceived
     };
-
     onNewMessageNotification(handleNewMessageNotification);
     return () => {};
   }, []);
 
-  // Handle typing indicators
+  // Typing indicators
   useEffect(() => {
     const handleUserTyping = (data) => {
       setTypingUsers((prev) => ({ ...prev, [data.userId]: data.userName }));
     };
-
     const handleUserStoppedTyping = (data) => {
       setTypingUsers((prev) => {
         const updated = { ...prev };
@@ -184,31 +172,25 @@ export const ChatProvider = ({ children }) => {
         return updated;
       });
     };
-
     onUserTyping(handleUserTyping);
     onUserStoppedTyping(handleUserStoppedTyping);
-
-    return () => {
-      offUserTyping();
-      offUserStoppedTyping();
-    };
+    return () => { offUserTyping(); offUserStoppedTyping(); };
   }, []);
 
-  // Handle read receipts
+  // Read receipts
   useEffect(() => {
     const handleMessagesRead = (data) => {
       setMessages((prev) =>
-        prev.map((msg) =>
-          data.messageIds.includes(msg._id) ? { ...msg, isRead: true } : msg
-        )
+        prev.map((msg) => data.messageIds.includes(msg._id) ? { ...msg, isRead: true } : msg)
       );
     };
-
     onMessagesRead(handleMessagesRead);
     return () => {};
   }, []);
 
-  // Listen for openChat event from Profile page
+  // ✅ Listen for openChat event (from ChatNotification click)
+  // ChatContext handles the actual fetchChatHistory
+  // Chat.jsx handles setting selectedUserId
   useEffect(() => {
     const handleOpenChat = (event) => {
       const { conversationId } = event.detail;
@@ -245,13 +227,14 @@ export const ChatProvider = ({ children }) => {
   const value = {
     conversations,
     currentConversation,
+    setCurrentConversation,
     messages,
     setMessages,
     typingUsers,
     unreadCount,
     loading,
     onlineUsers,
-    notifications,
+    notifications,    // ✅ only incoming messages from others
     replyTo,
     setReplyTo,
     fetchConversations,

@@ -9,6 +9,7 @@ import {
   FileText, Coins, Calendar, TrendingUp, MessageSquare, Search, Loader
 } from 'lucide-react';
 import Chat from '../pages/Chat';
+import { useChatContext } from '../context/ChatContext';
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
@@ -26,6 +27,13 @@ const Profile = () => {
     phone: user?.phone || '',
     profileImage: user?.profileImage || ''
   });
+
+  // use context
+  const { 
+    fetchChatHistory,
+  setCurrentConversation,
+  setMessages
+   } = useChatContext();
 
   useEffect(() => {
     if (user) {
@@ -82,9 +90,9 @@ const Profile = () => {
     setSearchResults([]);
     
     // Create conversation ID (sorted to ensure consistency)
-    const ids = [user._id, selectedUser._id].sort();
+    const ids = [user._id, selectedUser._id];
     const conversationId = `${ids[0]}-${ids[1]}`;
-    
+    //  fetchChatHistory();
     // Navigate to chat page
     navigate('/chat');
     
