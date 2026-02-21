@@ -37,10 +37,10 @@ const styles = `
   }
 @media (max-width: 480px) {
     .cw-root {
-  top: 560px;
+      top: 560px;
       right: 16px;
-      bottom: auto;
-      background: teal;
+      // bottom: auto;
+      background: transparent;
       border: none;
       border-radius: 10px 10px 0px  !important;
     }
@@ -50,7 +50,7 @@ const styles = `
   .cw-popup {
     position: absolute;
     bottom: 76px;
-    right: 0;
+    left: 0;
     width: 420px;
     max-width: calc(100vw - 48px);
     height: 620px;
