@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './ChatWidget.css';
-
+import api from '../utils/api';
 /* ─────────────────────────────────────────────────────────────────────────────
    GoogleFontsLoader — injects <link> tags into <head> at mount.
    More reliable than @import inside a stylesheet loaded dynamically.
@@ -114,7 +114,7 @@ const ChatWidget = () => {
       formData.append('message', userMessage);
       if (selectedFile) formData.append('file', selectedFile);
 
-      const response = await axios.post('http://localhost:5000/api/gemini', formData, {
+      const response = await api.post(`/gemini`, formData, {
         headers: { 'Content-Type': selectedFile ? 'multipart/form-data' : 'application/json' },
       });
 
