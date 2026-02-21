@@ -113,11 +113,11 @@ const CoursePapers = () => {
         api.get(`/courses/${courseId}`),
         api.get('/papers', { params: { course: courseId, status: 'approved' } }),
       ]);
-      setCourse(courseRes.data.data);
-      console.log("object",papersRes.data);
+      setCourse(courseRes.data);
+      console.log("object22",papersRes.data);
       setPapers(papersRes.data.data);
       setFiltered(papersRes.data.data);
-    } catch {
+    } catch (error) {
       toast.error('Failed to load papers');
     } finally {
       setLoading(false);

@@ -1,11 +1,11 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Play, Copy, Trash2, Download, Terminal, Sparkles, CheckCircle, X, ChevronRight } from 'lucide-react';
+import { Play, Copy, Trash2, Download, Terminal, Sparkles, CheckCircle, X, ChevronRight, Zap } from 'lucide-react';
 import './CodeCompiler.css';
 import ButtomNav from './Buttom-nav';
 import api from '../utils/api';
 
-// ─── Input detector — scans code for stdin patterns per language ──────────────
+// ─── Input detector ───────────────────────────────────────────────────────────
 const INPUT_PATTERNS = {
   python: [/\binput\s*\(/],
   java:   [/\.nextLine\s*\(/, /\.nextInt\s*\(/, /\.nextDouble\s*\(/, /\.next\s*\(/, /Scanner\s*\(/],
@@ -37,6 +37,141 @@ const extractPrompts = (code, language) => {
   return prompts;
 };
 
+// ─── Keyword Snippets per language ───────────────────────────────────────────
+const KEYWORD_SNIPPETS = {
+  python: [
+    { label: 'print("")',      snippet: 'print("")',                          cursorBack: 2  },
+    { label: 'input("")',      snippet: 'input("")',                          cursorBack: 2  },
+    { label: 'def func',       snippet: 'def function_name():\n    pass',     cursorBack: 0  },
+    { label: 'if / else',      snippet: 'if condition:\n    pass\nelse:\n    pass', cursorBack: 0 },
+    { label: 'for loop',       snippet: 'for i in range(10):\n    ',          cursorBack: 0  },
+    { label: 'while loop',     snippet: 'while condition:\n    ',             cursorBack: 0  },
+    { label: 'class',          snippet: 'class MyClass:\n    def __init__(self):\n        pass', cursorBack: 0 },
+    { label: 'try / except',   snippet: 'try:\n    pass\nexcept Exception as e:\n    print(e)', cursorBack: 0 },
+    { label: 'list comp',      snippet: '[x for x in iterable]',             cursorBack: 0  },
+    { label: 'lambda',         snippet: 'lambda x: x',                       cursorBack: 0  },
+    { label: 'f-string',       snippet: 'f""',                               cursorBack: 1  },
+    { label: 'import',         snippet: 'import ',                           cursorBack: 0  },
+    { label: 'from import',    snippet: 'from module import name',           cursorBack: 0  },
+    { label: 'len()',          snippet: 'len()',                             cursorBack: 1  },
+    { label: 'range()',        snippet: 'range()',                           cursorBack: 1  },
+    { label: 'enumerate()',    snippet: 'enumerate()',                       cursorBack: 1  },
+    { label: 'zip()',          snippet: 'zip()',                             cursorBack: 1  },
+    { label: 'return',         snippet: 'return ',                          cursorBack: 0  },
+    { label: 'None',           snippet: 'None',                             cursorBack: 0  },
+    { label: '[]  list',       snippet: '[]',                               cursorBack: 1  },
+    { label: '{}  dict',       snippet: '{}',                               cursorBack: 1  },
+  ],
+  java: [
+    { label: 'sysout',         snippet: 'System.out.println("");',           cursorBack: 3  },
+    { label: 'main()',         snippet: 'public static void main(String[] args) {\n    \n}', cursorBack: 0 },
+    { label: 'for loop',       snippet: 'for (int i = 0; i < n; i++) {\n    \n}', cursorBack: 0 },
+    { label: 'while',          snippet: 'while (condition) {\n    \n}',      cursorBack: 0  },
+    { label: 'if / else',      snippet: 'if (condition) {\n    \n} else {\n    \n}', cursorBack: 0 },
+    { label: 'class',          snippet: 'public class ClassName {\n    \n}', cursorBack: 0  },
+    { label: 'Scanner',        snippet: 'Scanner sc = new Scanner(System.in);\n', cursorBack: 0 },
+    { label: 'nextLine()',     snippet: 'sc.nextLine()',                     cursorBack: 0  },
+    { label: 'nextInt()',      snippet: 'sc.nextInt()',                      cursorBack: 0  },
+    { label: 'ArrayList',      snippet: 'ArrayList<Integer> list = new ArrayList<>();', cursorBack: 0 },
+    { label: 'try / catch',    snippet: 'try {\n    \n} catch (Exception e) {\n    e.printStackTrace();\n}', cursorBack: 0 },
+    { label: 'import util',    snippet: 'import java.util.*;',              cursorBack: 0  },
+    { label: 'String.format',  snippet: 'String.format("", )',              cursorBack: 0  },
+    { label: 'int[]',          snippet: 'int[] arr = new int[n];',          cursorBack: 0  },
+    { label: 'return',         snippet: 'return ',                          cursorBack: 0  },
+  ],
+  c: [
+    { label: 'printf()',       snippet: 'printf("");\n',                    cursorBack: 4  },
+    { label: 'scanf()',        snippet: 'scanf("", &);',                    cursorBack: 0  },
+    { label: '#include stdio', snippet: '#include <stdio.h>\n',             cursorBack: 0  },
+    { label: '#include stdlib',snippet: '#include <stdlib.h>\n',            cursorBack: 0  },
+    { label: '#include string',snippet: '#include <string.h>\n',            cursorBack: 0  },
+    { label: 'main()',         snippet: 'int main() {\n    \n    return 0;\n}', cursorBack: 0 },
+    { label: 'for loop',       snippet: 'for (int i = 0; i < n; i++) {\n    \n}', cursorBack: 0 },
+    { label: 'while',          snippet: 'while (condition) {\n    \n}',     cursorBack: 0  },
+    { label: 'if / else',      snippet: 'if (condition) {\n    \n} else {\n    \n}', cursorBack: 0 },
+    { label: 'struct',         snippet: 'struct Name {\n    int x;\n};',    cursorBack: 0  },
+    { label: 'malloc()',       snippet: 'malloc(sizeof())',                  cursorBack: 0  },
+    { label: 'free()',         snippet: 'free();',                           cursorBack: 0  },
+    { label: 'int arr[]',      snippet: 'int arr[100];',                    cursorBack: 0  },
+    { label: 'void func',      snippet: 'void function_name() {\n    \n}',  cursorBack: 0  },
+    { label: 'return 0',       snippet: 'return 0;',                        cursorBack: 0  },
+    { label: 'NULL',           snippet: 'NULL',                             cursorBack: 0  },
+    { label: 'sizeof()',       snippet: 'sizeof()',                         cursorBack: 1  },
+  ],
+  Cpp: [
+    { label: 'cout <<',        snippet: 'cout << "" << endl;',              cursorBack: 9  },
+    { label: 'cin >>',         snippet: 'cin >> ;',                         cursorBack: 1  },
+    { label: '#include iostream', snippet: '#include <iostream>\nusing namespace std;\n', cursorBack: 0 },
+    { label: '#include vector', snippet: '#include <vector>\n',             cursorBack: 0  },
+    { label: 'main()',         snippet: 'int main() {\n    \n    return 0;\n}', cursorBack: 0 },
+    { label: 'for loop',       snippet: 'for (int i = 0; i < n; i++) {\n    \n}', cursorBack: 0 },
+    { label: 'while',          snippet: 'while (condition) {\n    \n}',     cursorBack: 0  },
+    { label: 'if / else',      snippet: 'if (condition) {\n    \n} else {\n    \n}', cursorBack: 0 },
+    { label: 'class',          snippet: 'class MyClass {\npublic:\n    MyClass() {}\n};', cursorBack: 0 },
+    { label: 'vector<int>',    snippet: 'vector<int> v;',                   cursorBack: 0  },
+    { label: 'auto',           snippet: 'auto ',                            cursorBack: 0  },
+    { label: 'try / catch',    snippet: 'try {\n    \n} catch (exception& e) {\n    cerr << e.what();\n}', cursorBack: 0 },
+    { label: 'nullptr',        snippet: 'nullptr',                          cursorBack: 0  },
+    { label: 'string',         snippet: 'string ',                          cursorBack: 0  },
+    { label: 'return 0',       snippet: 'return 0;',                        cursorBack: 0  },
+    { label: 'endl',           snippet: 'endl',                             cursorBack: 0  },
+  ],
+};
+
+// ─── Keyword Carousel Component ───────────────────────────────────────────────
+const KeywordCarousel = ({ language, accentColor, onInsert }) => {
+  const keywords = KEYWORD_SNIPPETS[language] || [];
+  const trackRef = useRef(null);
+  const [isPaused, setIsPaused] = useState(false);
+  const [flashIdx, setFlashIdx] = useState(null);
+
+  const handleClick = (kw, idx) => {
+    setFlashIdx(idx);
+    setTimeout(() => setFlashIdx(null), 500);
+    onInsert(kw.snippet, kw.cursorBack);
+  };
+
+  return (
+    <div
+      className="kc-wrapper"
+      style={{ '--kc-accent': accentColor }}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* Left label */}
+      <div className="kc-label">
+        <Zap size={11} />
+        <span>Quick Insert</span>
+      </div>
+
+      {/* Scrolling track */}
+      <div className="kc-scroll-area">
+        <div
+          className={`kc-track ${isPaused ? 'kc-track--paused' : ''}`}
+          ref={trackRef}
+          style={{ '--kc-count': keywords.length }}
+        >
+          {/* Duplicate for seamless loop */}
+          {[...keywords, ...keywords].map((kw, idx) => (
+            <button
+              key={idx}
+              className={`kc-chip ${flashIdx === idx % keywords.length ? 'kc-chip--flash' : ''}`}
+              onClick={() => handleClick(kw, idx % keywords.length)}
+              title={`Insert: ${kw.snippet}`}
+            >
+              <span className="kc-chip-dot" />
+              <span className="kc-chip-label">{kw.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Right fade + icon */}
+      <div className="kc-fade-right" />
+    </div>
+  );
+};
+
 // ─── Terminal Input Modal ─────────────────────────────────────────────────────
 const InputModal = ({ language, code, onSubmit, onCancel, accentColor }) => {
   const [lines, setLines]   = useState(['']);
@@ -44,9 +179,7 @@ const InputModal = ({ language, code, onSubmit, onCancel, accentColor }) => {
   const inputRefs           = useRef([]);
   const prompts             = extractPrompts(code, language);
 
-  useEffect(() => {
-    inputRefs.current[0]?.focus();
-  }, []);
+  useEffect(() => { inputRefs.current[0]?.focus(); }, []);
 
   const handleKey = (e, idx) => {
     if (e.key === 'Enter') {
@@ -68,62 +201,45 @@ const InputModal = ({ language, code, onSubmit, onCancel, accentColor }) => {
     }
   };
 
-  const handleChange = (val, idx) => {
+  const handleChange = (val, idx) =>
     setLines((prev) => prev.map((l, i) => (i === idx ? val : l)));
-  };
-
-  const handleSubmit = () => {
-    onSubmit(lines.join('\n'));
-  };
 
   return (
     <div className="rim-overlay" onClick={(e) => e.target === e.currentTarget && onCancel()}>
       <div className="rim-box" style={{ '--rim-accent': accentColor }}>
-        {/* Top bar */}
         <div className="rim-topbar">
           <div className="rim-dots">
             <span className="rim-dot" style={{ background: '#ff5f57' }} />
             <span className="rim-dot" style={{ background: '#febc2e' }} />
             <span className="rim-dot" style={{ background: '#28c840' }} />
           </div>
-          <span className="rim-title">
-            <Terminal size={12} /> stdin — program input
-          </span>
+          <span className="rim-title"><Terminal size={12} /> stdin — program input</span>
           <button className="rim-close" onClick={onCancel}><X size={14} /></button>
         </div>
-
-        {/* Info banner */}
         <div className="rim-banner">
           <span className="rim-banner-icon">⚡</span>
           <span>Your program needs <strong>input</strong>. Type each value on a new line, then click <strong>Run</strong>.</span>
         </div>
-
-        {/* Detected prompts */}
         {prompts.length > 0 && (
           <div className="rim-prompts">
             <p className="rim-prompts-title">Detected input prompts in your code:</p>
             {prompts.map((p, i) => (
               <div key={i} className="rim-prompt-chip">
-                <ChevronRight size={11} />
-                <span>{p}</span>
+                <ChevronRight size={11} /><span>{p}</span>
               </div>
             ))}
           </div>
         )}
-
-        {/* Terminal input area */}
         <div className="rim-terminal">
           <div className="rim-term-header">
             <span className="rim-term-label">$ input stream</span>
-            <span className="rim-term-hint">Enter ↵ = new line &nbsp;·&nbsp; Backspace on empty = remove line</span>
+            <span className="rim-term-hint">Enter ↵ = new line · Backspace on empty = remove line</span>
           </div>
           <div className="rim-term-body">
             {lines.map((val, idx) => (
               <div key={idx} className={`rim-line ${active === idx ? 'rim-line-active' : ''}`}>
                 <span className="rim-line-num">{idx + 1}</span>
-                <span className="rim-cursor-wrap">
-                  <ChevronRight size={12} className="rim-prompt-arrow" />
-                </span>
+                <span className="rim-cursor-wrap"><ChevronRight size={12} className="rim-prompt-arrow" /></span>
                 <input
                   ref={(el) => (inputRefs.current[idx] = el)}
                   className="rim-input"
@@ -143,11 +259,9 @@ const InputModal = ({ language, code, onSubmit, onCancel, accentColor }) => {
             <code>{lines.join('\\n') || '—'}</code>
           </div>
         </div>
-
-        {/* Actions */}
         <div className="rim-actions">
           <button className="rim-btn-cancel" onClick={onCancel}>Cancel</button>
-          <button className="rim-btn-run" onClick={handleSubmit} style={{ background: accentColor }}>
+          <button className="rim-btn-run" onClick={() => onSubmit(lines.join('\n'))} style={{ background: accentColor }}>
             <Play size={13} fill="currentColor" /> Run with this input
           </button>
         </div>
@@ -216,49 +330,19 @@ const highlightCode = (code, lang) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 const CodeCompiler = () => {
   const languageTemplates = {
-    python: `# Python Example
-def greet(name):
-    return f"Hello, {name}!"
-
-result = greet("World")
-print(result)
-print("Welcome to SAVS Compiler!")`,
-    java: `// Java Example
-public class Main {
-    public static void main(String[] args) {
-        String message = "Hello, World!";
-        System.out.println(message);
-        System.out.println("Welcome to SAVS Compiler!");
-    }
-}`,
-    c: `// C Example
-#include <stdio.h>
-
-int main() {
-    char name[] = "World";
-    printf("Hello, %s!\\n", name);
-    printf("Welcome to SAVS Compiler!\\n");
-    return 0;
-}`,
-    Cpp: `#include <iostream>
-using namespace std;
-
-int main() {
-    int a, b;
-    cout << "Enter two numbers: ";
-    cin >> a >> b;
-    cout << "Sum = " << a + b << endl;
-    return 0;
-}`,
+    python: `# Python Example\ndef greet(name):\n    return f"Hello, {name}!"\n\nresult = greet("World")\nprint(result)\nprint("Welcome to SAVS Compiler!")`,
+    java: `// Java Example\npublic class Main {\n    public static void main(String[] args) {\n        String message = "Hello, World!";\n        System.out.println(message);\n        System.out.println("Welcome to SAVS Compiler!");\n    }\n}`,
+    c: `// C Example\n#include <stdio.h>\n\nint main() {\n    char name[] = "World";\n    printf("Hello, %s!\\n", name);\n    printf("Welcome to SAVS Compiler!\\n");\n    return 0;\n}`,
+    Cpp: `#include <iostream>\nusing namespace std;\n\nint main() {\n    int a, b;\n    cout << "Enter two numbers: ";\n    cin >> a >> b;\n    cout << "Sum = " << a + b << endl;\n    return 0;\n}`,
   };
 
-  const [language, setLanguage]     = useState('python');
-  const [code, setCode]             = useState(languageTemplates['python']);
-  const [input, setInput]           = useState('');
-  const [output, setOutput]         = useState('');
-  const [error, setError]           = useState('');
-  const [loading, setLoading]       = useState(false);
-  const [copied, setCopied]         = useState(false);
+  const [language, setLanguage]           = useState('python');
+  const [code, setCode]                   = useState(languageTemplates['python']);
+  const [input, setInput]                 = useState('');
+  const [output, setOutput]               = useState('');
+  const [error, setError]                 = useState('');
+  const [loading, setLoading]             = useState(false);
+  const [copied, setCopied]               = useState(false);
   const [showInputModal, setShowInputModal] = useState(false);
 
   const textareaRef  = useRef(null);
@@ -283,55 +367,63 @@ int main() {
     setOutput(''); setError(''); setInput('');
   };
 
-  // ─── Core run logic (called after input is confirmed) ─────────────────────
+  // ─── Insert keyword snippet at cursor position ─────────────────────────────
+  const handleInsertSnippet = useCallback((snippet, cursorBack) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+
+    const start = ta.selectionStart;
+    const end   = ta.selectionEnd;
+    const before = code.slice(0, start);
+    const after  = code.slice(end);
+
+    // Auto-indent: match current line's leading spaces
+    const currentLineStart = before.lastIndexOf('\n') + 1;
+    const indent = before.slice(currentLineStart).match(/^(\s*)/)[1];
+    const indentedSnippet = snippet.replace(/\n/g, '\n' + indent);
+
+    const newCode     = before + indentedSnippet + after;
+    const newCursorPos = start + indentedSnippet.length - cursorBack;
+
+    setCode(newCode);
+
+    // Restore focus + move cursor
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(newCursorPos, newCursorPos);
+      syncScroll();
+    });
+  }, [code, syncScroll]);
+
   const runCode = async (stdinValue) => {
     setLoading(true); setOutput(''); setError('');
     try {
       const response = await api.post('/compiler', { code, language, input: stdinValue });
       const { output: out = '', error: err = '' } = response.data;
-      console.log(response.data);
-      if (err && err.trim()) {
-        setError(err);
-      } else {
-        setOutput(out.trim() !== '' ? out : '(no output)');
-      }
+      if (err && err.trim()) setError(err);
+      else setOutput(out.trim() !== '' ? out : '(no output)');
     } catch (err) {
-      if (err.code === 'ECONNABORTED') {
-        setError('⏱️ Request timed out. Check for infinite loops.');
-      } else if (!err.response) {
-        setError('🌐 Cannot reach server. Check your connection.');
-      } else {
-        setError(`❌ Server error: ${err.response?.data?.error || err.message}`);
-      }
+      if (err.code === 'ECONNABORTED')   setError('⏱️ Request timed out. Check for infinite loops.');
+      else if (!err.response)            setError('🌐 Cannot reach server. Check your connection.');
+      else setError(`❌ Server error: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // ─── Run button handler — shows modal if input needed & stdin empty ────────
   const handleRunClick = () => {
     if (!code.trim()) { setError('Please write some code first!'); return; }
-
     const needsInput = codeNeedsInput(code, language);
     const hasInput   = input.trim() !== '';
-
-    if (needsInput && !hasInput) {
-      // Show the modal so user can provide input interactively
-      setShowInputModal(true);
-    } else {
-      // Stdin already filled or not needed — run directly
-      runCode(input);
-    }
+    if (needsInput && !hasInput) setShowInputModal(true);
+    else runCode(input);
   };
 
-  // ─── Modal callbacks ───────────────────────────────────────────────────────
   const handleModalSubmit = (stdinValue) => {
-    setInput(stdinValue);           // also update the stdin box for visibility
+    setInput(stdinValue);
     setShowInputModal(false);
     runCode(stdinValue);
   };
-
-  const handleModalCancel = () => setShowInputModal(false);
 
   const copyCode = () => {
     navigator.clipboard.writeText(code);
@@ -340,7 +432,7 @@ int main() {
   };
 
   const downloadCode = () => {
-    const ext = { python: 'py', java: 'java', c: 'c', Cpp: 'cpp' };
+    const ext  = { python: 'py', java: 'java', c: 'c', Cpp: 'cpp' };
     const blob = new Blob([code], { type: 'text/plain' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -357,8 +449,9 @@ int main() {
     Cpp:    { icon: '🍁', label: 'C++',    accent: '#34d399' },
   };
 
-  const highlighted = highlightCode(code, language);
+  const highlighted     = highlightCode(code, language);
   const needsInputBadge = codeNeedsInput(code, language);
+  const fileExt         = language === 'python' ? 'py' : language === 'java' ? 'java' : language === 'Cpp' ? 'cpp' : 'c';
 
   return (
     <div className="cc-root">
@@ -366,14 +459,13 @@ int main() {
       <div className="cc-blob cc-blob-b" />
       <div className="cc-blob cc-blob-c" />
 
-      {/* ── Runtime Input Modal ── */}
       {showInputModal && (
         <InputModal
           language={language}
           code={code}
           accentColor={langMeta[language].accent}
           onSubmit={handleModalSubmit}
-          onCancel={handleModalCancel}
+          onCancel={() => setShowInputModal(false)}
         />
       )}
 
@@ -402,11 +494,10 @@ int main() {
           {/* Toolbar */}
           <div className="cc-toolbar">
             <div className="cc-toolbar-left">
-              <div className="cc-file-chip">
+              {/* <div className="cc-file-chip">
                 <span style={{ color: langMeta[language].accent }}>{langMeta[language].icon}</span>
-                <span>main.{language === 'python' ? 'py' : language === 'java' ? 'java' : language === 'Cpp' ? 'cpp' : 'c'}</span>
-              </div>
-              {/* Input required badge */}
+                <span>main.{fileExt}</span>
+              </div> */}
               {needsInputBadge && (
                 <div className="cc-input-badge" style={{ '--badge-color': langMeta[language].accent }}>
                   <Terminal size={11} /> stdin required
@@ -432,8 +523,7 @@ int main() {
               >
                 {loading
                   ? <><div className="cc-spinner" /><span>Running…</span></>
-                  : <><Play size={15} fill="currentColor" /><span>Run Code</span></>
-                }
+                  : <><Play size={15} fill="currentColor" /><span>Run Code</span></>}
               </button>
             </div>
           </div>
@@ -447,6 +537,14 @@ int main() {
                 <span>Editor</span>
                 <span className="cc-line-count">{lineCount} lines</span>
               </div>
+
+              {/* ── KEYWORD CAROUSEL ── */}
+              <KeywordCarousel
+                language={language}
+                accentColor={langMeta[language].accent}
+                onInsert={handleInsertSnippet}
+              />
+
               <div className="cc-editor-body">
                 <div className="cc-linenos" ref={lineNumRef}>
                   {Array.from({ length: lineCount }, (_, i) => (
@@ -471,6 +569,7 @@ int main() {
                   placeholder="// Write your code here…"
                 />
               </div>
+
               <div className="cc-stdin">
                 <label className="cc-stdin-label">
                   <Terminal size={12} />
