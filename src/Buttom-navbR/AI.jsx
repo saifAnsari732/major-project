@@ -37,9 +37,8 @@ const styles = `
   }
 @media (max-width: 480px) {
     .cw-root {
-      top: 560px;
-      right: 16px;
-      // bottom: auto;
+     bottom: 70px;
+    right: 28px;
       background: transparent;
       border: none;
       border-radius: 10px 10px 0px  !important;
