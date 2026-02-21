@@ -1,510 +1,869 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
-// ─── Inline Styles ────────────────────────────────────────────────────────────
-const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Outfit:wght@400;500;600;700&display=swap');
-  @import url('https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css');
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* ─── Injected Styles ─────────────────────────────────────────────────────── */
+const styles = `
+  /* ✅ NOTE: Google Fonts are now loaded via <GoogleFontsLoader /> component
+     (injected <link> tags) instead of @import — much more reliable in React. */
 
   :root {
-    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3350;
-    --accent: #4f8ef7; --accent2: #7c3aed; --green: #10b981;
-    --text: #e2e8f0; --text-muted: #8892a4;
-    --radius: 18px; --font-ui: 'Outfit', sans-serif; --font-mono: 'IBM Plex Mono', monospace;
+    --ink: #0d0d12;
+    --surface: #ffffff;
+    --glass: rgba(255,255,255,0.72);
+    --border: rgba(0,0,0,0.08);
+    --muted: #8a8fa8;
+    --accent: #5b4bff;
+    --accent2: #ff4b91;
+    --accent-soft: rgba(91,75,255,0.12);
+    --green: #00c98d;
+    --code-bg: #0f1117;
+    --code-text: #c9d1d9;
+    --code-num: #5b4bff;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-md: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-lg: 0 24px 64px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.1);
+    --radius: 20px;
+    --radius-sm: 12px;
   }
 
-  .cw-root { position: fixed; bottom: 28px; right: 28px; z-index: 9999; font-family: var(--font-ui); }
-
-  .cw-toggle {
-    width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer;
-    background: linear-gradient(135deg, #4f8ef7, #7c3aed);
-    box-shadow: 0 8px 32px rgba(79,142,247,.45);
-    display: flex; align-items: center; justify-content: center;
-    transition: transform .2s, box-shadow .2s; position: relative;
+  /* ── Container ── */
+  .cw-root {
+    position: fixed;
+    bottom: 70px;
+    right: 28px;
+    z-index: 9999;
+    /* ✅ Reliable font fallback stack */
+    font-family: 'DM Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   }
-  .cw-toggle:hover { transform: scale(1.08); }
-  .cw-toggle svg { width: 26px; height: 26px; fill: #fff; }
-  .cw-badge {
-    position: absolute; top: -4px; right: -4px;
-    width: 20px; height: 20px; border-radius: 50%;
-    background: #4f8ef7; color: #fff; font-size: 13px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; border: 2px solid #0f1117;
+@media (max-width: 480px) {
+    .cw-root {
+  top: 560px;
+      right: 16px;
+      bottom: auto;
+      background: teal;
+      border: none;
+      border-radius: 10px 10px 0px  !important;
+    }
+}
+
+  /* ── Popup ── */
+  .cw-popup {
+    position: absolute;
+    bottom: 76px;
+    right: 0;
+    width: 420px;
+    max-width: calc(100vw - 48px);
+    height: 620px;
+    // background: red;
+    // background: linear-gradient(160deg, #1a0533 0%, #0d0d1a 45%, #1a0520 10%);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform-origin: bottom right;
+    animation: popIn 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   }
 
-  .cw-panel {
-    position: absolute; bottom: 76px; right: 0; width: 430px; height: 650px;
-    background: var(--bg); border: 1px solid var(--border); border-radius: 24px;
-    display: flex; flex-direction: column; overflow: hidden;
-    box-shadow: 0 32px 80px rgba(0,0,0,.6);
-    animation: panelIn .25s cubic-bezier(.34,1.56,.64,1);
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.88) translateY(16px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
   }
-  @keyframes panelIn { from { opacity:0; transform:scale(.93) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
 
+  /* ── Header ── */
   .cw-header {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 14px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
   }
+
+  .cw-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 120% at 110% -20%, rgba(91,75,255,0.45) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 80% at -10% 110%, rgba(255,75,145,0.3) 0%, transparent 55%);
+    pointer-events: none;
+  }
+
+  .cw-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+  }
+
   .cw-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: linear-gradient(135deg, #4f8ef7, #7c3aed);
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 16px; color: #fff; position: relative; flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', 'Georgia', serif;
+    font-weight: 800;
+    font-size: 16px;
+    color: #fff;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(91,75,255,0.4);
+    flex-shrink: 0;
   }
-  .cw-dot {
-    position: absolute; bottom: 1px; right: 1px; width: 10px; height: 10px;
-    border-radius: 50%; background: #10b981; border: 2px solid var(--surface);
-  }
-  .cw-hname { font-size: 15px; font-weight: 700; color: var(--text); }
-  .cw-hsub { font-size: 11px; color: var(--green); margin-top: 1px; }
-  .cw-hright { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-  .cw-mtoggle {
-    background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.25);
-    border-radius: 100px; padding: 4px 10px; font-size: 11px; font-family: var(--font-mono);
-    color: var(--accent); cursor: pointer; transition: background .15s; white-space: nowrap;
-  }
-  .cw-mtoggle.on { background: rgba(79,142,247,.25); border-color: var(--accent); }
-  .cw-closebtn {
-    width: 30px; height: 30px; border-radius: 8px; border: none;
-    background: var(--surface2); color: var(--text-muted); cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .cw-closebtn:hover { background: var(--border); color: var(--text); }
-  .cw-closebtn svg { width: 16px; height: 16px; fill: currentColor; }
 
-  .cw-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .cw-avatar-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 13px;
+    height: 13px;
+    background: var(--green);
+    border: 2.5px solid var(--ink);
+    border-radius: 50%;
+    animation: breathe 2.5s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,201,141,0.4); }
+    50%       { box-shadow: 0 0 0 5px rgba(0,201,141,0); }
+  }
+
+  .cw-header-info { display: flex; flex-direction: column; gap: 2px; }
+
+  .cw-header-name {
+    font-family: 'Syne', 'Georgia', serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: #fff;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+
+  .cw-header-status {
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .cw-status-dot {
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .cw-close {
+    position: relative;
+    z-index: 1;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: rgba(255,255,255,0.8);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .cw-close:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    transform: rotate(90deg);
+  }
+
+  .cw-close svg { width: 16px; height: 16px; }
+
+  /* ────────────────────────────────────────────────────────
+     ✅ CHANGED: Chat Body Background
+     Old → plain #f5f5f9 grey
+     New → soft blue-purple-pink gradient mesh
+           + frosted-glass bot bubbles to match
+  ──────────────────────────────────────────────────────── */
+  .cw-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    position: relative;
+
+    background:
+      radial-gradient(ellipse 70% 55% at 10% 15%,  rgba(99,179,237,0.30)  0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 88% 82%,  rgba(183,148,246,0.32) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 65% at 52% 48%,  rgba(248,180,217,0.20) 0%, transparent 65%),
+      linear-gradient(155deg, #dbeafe 0%, #ede9fe 52%, #fce7f3 100%);
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* subtle grain overlay for depth */
+  .cw-body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+  }
+
+  /* keep message rows above the grain */
+  .cw-row { position: relative; z-index: 1; }
+
   .cw-body::-webkit-scrollbar { width: 4px; }
-  .cw-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .cw-body::-webkit-scrollbar-track { background: transparent; }
+  .cw-body::-webkit-scrollbar-thumb { background: rgba(91,75,255,0.22); border-radius: 4px; }
 
-  .cw-row { display: flex; gap: 8px; }
-  .cw-row.user { flex-direction: row-reverse; }
-  .cw-mavatar {
-    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; align-self: flex-end;
-    background: linear-gradient(135deg, #4f8ef7, #7c3aed);
+  /* ── Message Rows ── */
+  .cw-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: 94%;
+  }
+
+  .cw-row.bot  { align-self: flex-start; }
+  .cw-row.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .cw-msg-avatar {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; color: #fff;
+    font-family: 'Syne', 'Georgia', serif;
+    font-weight: 800;
+    font-size: 12px;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(91,75,255,0.25);
   }
+
+  /* ── Bubbles ── */
   .cw-bubble {
-    max-width: 80%; padding: 11px 14px; border-radius: var(--radius);
-    font-size: 13.5px; line-height: 1.65; color: var(--text); word-break: break-word;
-  }
-  .cw-bubble.bot { background: #1e2235; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-  .cw-bubble.user { background: linear-gradient(135deg, #4f8ef7, #7c3aed); border-bottom-right-radius: 4px; }
-  .cw-time { font-size: 10px; color: rgba(255,255,255,.4); margin-top: 5px; display: block; }
-
-  /* Math */
-  .cw-math-block {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 14px; margin: 8px 0; overflow-x: auto; text-align: center;
-  }
-  .cw-math-err { color: #f87171; font-size: 12px; font-family: var(--font-mono); }
-
-  /* Code */
-  .cw-code { background: #0d1117; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin: 8px 0; }
-  .cw-code-hdr {
-    background: var(--surface2); padding: 5px 12px;
-    font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .cw-cpybtn { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 11px; font-family: var(--font-mono); }
-  .cw-code-body { padding: 12px; overflow-x: auto; }
-  .cw-code-body code { font-family: var(--font-mono); font-size: 12.5px; color: #a9b1d6; white-space: pre; }
-  .cw-inline-code {
-    background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
-    padding: 1px 5px; font-family: var(--font-mono); font-size: 12px; color: #7ee787;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    max-width: 100%;
+    word-break: break-word;
+    position: relative;
   }
 
-  /* Typing */
-  .cw-typing { display: flex; gap: 5px; padding: 4px 0; }
-  .cw-typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: bounce 1.2s infinite; }
-  .cw-typing span:nth-child(2) { animation-delay:.2s; } .cw-typing span:nth-child(3) { animation-delay:.4s; }
-  @keyframes bounce { 0%,80%,100%{transform:translateY(0);opacity:.4;} 40%{transform:translateY(-6px);opacity:1;} }
+  /* ✅ Bot bubble: frosted-glass to complement the gradient bg */
+  .cw-bubble.bot {
+    background: rgba(255, 255, 255, 0.80);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.10), var(--shadow-sm);
+    border-bottom-left-radius: 5px;
+  }
 
-  /* Input */
-  .cw-foot { background: var(--surface); border-top: 1px solid var(--border); padding: 12px 14px; flex-shrink: 0; }
-  .cw-mathkeys { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
-  .cw-mkey {
-    background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
-    padding: 3px 9px; font-size: 11px; font-family: var(--font-mono);
-    color: var(--text-muted); cursor: pointer; transition: all .12s;
+  .cw-bubble.user {
+    background-image: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    color: #fff;
+    border-bottom-right-radius: 5px;
   }
-  .cw-mkey:hover { border-color: var(--accent); color: var(--accent); }
-  .cw-fpreview {
-    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 7px 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted);
-  }
-  .cw-fpreview img { width: 36px; height: 36px; object-fit: cover; border-radius: 5px; }
-  .cw-fremove { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 15px; }
-  .cw-form { display: flex; gap: 8px; align-items: flex-end; }
-  .cw-inwrap {
-    flex: 1; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 12px; display: flex; align-items: flex-end; gap: 2px; padding: 4px 4px 4px 12px;
-    transition: border-color .2s;
-  }
-  .cw-inwrap:focus-within { border-color: var(--accent); }
-  .cw-input {
-    flex: 1; background: none; border: none; outline: none; color: var(--text);
-    font-size: 13.5px; font-family: var(--font-ui); padding: 7px 0;
-    resize: none; max-height: 100px; line-height: 1.5; min-height: 34px;
-  }
-  .cw-input::placeholder { color: var(--text-muted); }
-  .cw-attachbtn {
-    width: 30px; height: 30px; border-radius: 7px; border: none; cursor: pointer;
-    background: none; color: var(--text-muted); display: flex; align-items: center; justify-content: center;
-  }
-  .cw-attachbtn:hover { color: var(--accent); }
-  .cw-attachbtn svg { width: 17px; height: 17px; fill: currentColor; }
-  .cw-sendbtn {
-    width: 42px; height: 42px; border-radius: 11px; border: none; cursor: pointer;
-    background: linear-gradient(135deg, #4f8ef7, #7c3aed);
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    transition: opacity .2s, transform .15s;
-  }
-  .cw-sendbtn:disabled { opacity: .35; cursor: not-allowed; }
-  .cw-sendbtn:not(:disabled):hover { transform: scale(1.06); }
-  .cw-sendbtn svg { width: 17px; height: 17px; fill: #fff; }
-  .cw-credits { text-align: center; font-size: 10.5px; color: var(--text-muted); margin-top: 8px; }
 
-  /* Markdown */
-  .cw-md h1 { font-size: 16px; color: #fff; margin: 6px 0 3px; }
-  .cw-md h2 { font-size: 14px; color: #fff; margin: 5px 0 2px; }
-  .cw-md h3 { font-size: 13px; color: #cbd5e1; margin: 4px 0 2px; }
-  .cw-md p { margin: 3px 0; }
-  .cw-md ul, .cw-md ol { padding-left: 16px; margin: 4px 0; }
-  .cw-md li { margin: 2px 0; }
-  .cw-md strong { color: #fff; font-weight: 600; }
-  .cw-md em { color: #a9b1d6; }
-  .cw-md hr { border: none; border-top: 1px solid var(--border); margin: 7px 0; }
-  .cw-md table { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 12px; }
-  .cw-md th { background: var(--surface2); padding: 5px 9px; border: 1px solid var(--border); text-align: left; }
-  .cw-md td { padding: 4px 9px; border: 1px solid var(--border); }
+  .cw-bubble p { margin: 0 0 4px 0; }
+
+  .cw-time {
+    font-size: 10px;
+    opacity: 0.45;
+    display: block;
+    text-align: right;
+    margin-top: 3px;
+  }
+
+  /* ── Code Block ── */
+  .cw-code-block {
+    background: var(--code-bg);
+    border-radius: 12px;
+    overflow: hidden;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    border: 1px solid rgba(255,255,255,0.06);
+    max-height: 380px;
+    overflow-y: auto;
+  }
+
+  .cw-code-block::-webkit-scrollbar { width: 6px; }
+  .cw-code-block::-webkit-scrollbar-track { background: #0a0d14; }
+  .cw-code-block::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 4px; }
+
+  .cw-code-topbar {
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .cw-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .cw-dot.r { background: #ff5f57; }
+  .cw-dot.y { background: #febc2e; }
+  .cw-dot.g { background: #28c840; }
+
+  .cw-code-inner { padding: 12px 0; }
+
+  .cw-line {
+    display: flex;
+    gap: 0;
+    padding: 0 14px;
+    transition: background 0.15s;
+  }
+
+  .cw-line:hover { background: rgba(255,255,255,0.03); }
+
+  .cw-ln {
+    min-width: 38px;
+    color: var(--code-num);
+    font-weight: 600;
+    opacity: 0.7;
+    text-align: right;
+    padding-right: 16px;
+    user-select: none;
+    flex-shrink: 0;
+    font-size: 11.5px;
+    padding-top: 1px;
+  }
+
+  .cw-lt { color: var(--code-text); flex: 1; white-space: pre-wrap; word-break: break-all; }
+
+  /* ── Typing ── */
+  .cw-typing {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 4px;
+  }
+
+  .cw-typing span {
+    width: 7px; height: 7px;
+    background: var(--muted);
+    border-radius: 50%;
+    display: inline-block;
+    animation: typingBounce 1.2s infinite ease-in-out;
+  }
+
+  .cw-typing span:nth-child(2) { animation-delay: 0.15s; }
+  .cw-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+  @keyframes typingBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+    40%           { transform: translateY(-6px); opacity: 1; }
+  }
+
+  /* ── Input Area ── */
+  .cw-footer {
+    background: #fff;
+    border-top: 1px solid var(--border);
+    padding: 12px 14px;
+    flex-shrink: 0;
+  }
+
+  .cw-file-preview {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background: var(--accent-soft);
+    border: 1px solid rgba(91,75,255,0.2);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .cw-file-preview-img {
+    width: 52px; height: 52px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid rgba(91,75,255,0.2);
+  }
+
+  .cw-file-icon { font-size: 22px; flex-shrink: 0; }
+
+  .cw-file-meta { flex: 1; min-width: 0; }
+  .cw-file-name {
+    margin: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cw-file-size { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
+
+  .cw-remove-file {
+    background: rgba(255,75,145,0.15);
+    color: var(--accent2);
+    border: none;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+
+  .cw-remove-file:hover { background: var(--accent2); color: #fff; }
+
+  .cw-input-row { display: flex; gap: 10px; align-items: center; }
+
+  .cw-input-wrap {
+    flex: 1;
+    position: relative;
+    background: #f5f5f9;
+    border: 1.5px solid var(--border);
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+  }
+
+  .cw-input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(91,75,255,0.1);
+    background: #fff;
+  }
+
+  .cw-text-input {
+    flex: 1;
+    padding: 10px 8px 10px 16px;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-family: 'DM Sans', 'Segoe UI', Arial, sans-serif;
+    font-size: 13.5px;
+    color: var(--ink);
+  }
+
+  .cw-text-input::placeholder { color: #b0b5c8; }
+  .cw-text-input:disabled { opacity: 0.5; }
+
+  .cw-input-icons {
+    display: flex;
+    gap: 2px;
+    padding-right: 8px;
+    align-items: center;
+  }
+
+  .cw-icon-btn {
+    width: 30px; height: 30px;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.2s;
+    font-size: 16px;
+  }
+
+  .cw-icon-btn:hover { background: var(--accent-soft); color: var(--accent); }
+  .cw-icon-btn svg { width: 16px; height: 16px; }
+  .cw-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .cw-send {
+    width: 42px; height: 42px;
+    background: var(--ink);
+    border: none;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    flex-shrink: 0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .cw-send.active {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    box-shadow: 0 4px 16px rgba(91,75,255,0.35);
+  }
+
+  .cw-send:hover:not(:disabled) { transform: scale(1.1) rotate(8deg); }
+  .cw-send:disabled { background: #d1d5db; cursor: not-allowed; }
+  .cw-send svg { width: 17px; height: 17px; }
+
+  .cw-powered {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 10.5px;
+    color: #c0c4d6;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── FAB ── */
+  .cw-fab {
+    width: 58px; height: 58px;
+    background: var(--ink);
+    border: none;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.28), 0 3px 10px rgba(0,0,0,0.18);
+  }
+
+  .cw-fab::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.3s;
+    border-radius: inherit;
+  }
+
+  .cw-fab:hover::after { opacity: 1; }
+  .cw-fab:hover { transform: scale(1.1) translateY(-2px); }
+  .cw-fab.open::after { opacity: 1; }
+  .cw-fab.open { transform: rotate(135deg); box-shadow: 0 8px 28px rgba(91,75,255,0.4); }
+  .cw-fab.open:hover { transform: rotate(135deg) scale(1.1); }
+
+  .cw-fab-icon {
+    position: relative;
+    z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .cw-fab svg { width: 24px; height: 24px; }
+
+  .cw-badge {
+    position: absolute;
+    top: 1px; right: 1px;
+    width: 20px; height: 20px;
+    background: var(--accent2);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    z-index: 2;
+    animation: badgePulse 2s infinite;
+  }
+
+  @keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50%       { transform: scale(1.2); }
+  }
+
+  @media (max-width: 480px) {
+    .cw-root { bottom: 20px; right: 14px; }
+    .cw-popup { width: calc(100vw - 28px); height: 520px; bottom: 70px; }
+  }
 `;
 
-// ─── External library loaders ─────────────────────────────────────────────────
-let _katexP = null;
-const loadKaTeX = () => {
-  if (_katexP) return _katexP;
-  _katexP = new Promise(res => {
-    if (window.katex) return res(window.katex);
+/* ─── Helpers ─────────────────────────────────────────────────────────────── */
+const formatTime = (iso) => {
+  if (!iso) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const addLineNumbers = (text) =>
+  text.split('\n').map((line, i) => ({ number: i + 1, text: line }));
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ✅ GoogleFontsLoader
+   Injects <link> tags into <head> — far more reliable than @import inside
+   a JS-injected <style> tag, which browsers often block or delay.
+───────────────────────────────────────────────────────────────────────────── */
+const GoogleFontsLoader = () => {
+  useEffect(() => {
+    if (document.querySelector('[data-cw-fonts]')) return;
+
+    const pc1 = document.createElement('link');
+    pc1.rel = 'preconnect';
+    pc1.href = 'https://fonts.googleapis.com';
+
+    const pc2 = document.createElement('link');
+    pc2.rel = 'preconnect';
+    pc2.href = 'https://fonts.gstatic.com';
+    pc2.crossOrigin = 'anonymous';
+
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css';
-    document.head.appendChild(link);
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js';
-    s.onload = () => res(window.katex);
-    document.head.appendChild(s);
-  });
-  return _katexP;
+    link.href = 'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap';
+    link.setAttribute('data-cw-fonts', '1');
+
+    document.head.append(pc1, pc2, link);
+  }, []);
+
+  return null;
 };
 
-let _mathP = null;
-const loadMathJS = () => {
-  if (_mathP) return _mathP;
-  _mathP = new Promise(res => {
-    if (window.math) return res(window.math);
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.2/math.min.js';
-    s.onload = () => res(window.math);
-    document.head.appendChild(s);
-  });
-  return _mathP;
-};
-
-// ─── Render LaTeX safely ──────────────────────────────────────────────────────
-const tex = (latex, display = false) => {
-  if (!window.katex) return { __html: latex };
-  try {
-    return { __html: window.katex.renderToString(latex.trim(), { displayMode: display, throwOnError: false }) };
-  } catch {
-    return { __html: `<span class="cw-math-err">[LaTeX error: ${latex}]</span>` };
-  }
-};
-
-// ─── Code Block ───────────────────────────────────────────────────────────────
-const CodeBlock = ({ lang, code }) => {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="cw-code">
-      <div className="cw-code-hdr">
-        <span>{lang || 'code'}</span>
-        <button className="cw-cpybtn" onClick={() => {
-          navigator.clipboard.writeText(code);
-          setCopied(true); setTimeout(() => setCopied(false), 1800);
-        }}>{copied ? '✓ copied' : 'copy'}</button>
+/* ─── Sub-Components ──────────────────────────────────────────────────────── */
+const TypingBubble = () => (
+  <div className="cw-row bot">
+    <div className="cw-msg-avatar">S</div>
+    <div className="cw-bubble bot">
+      <div className="cw-typing">
+        <span /><span /><span />
       </div>
-      <div className="cw-code-body"><code>{code.trim()}</code></div>
     </div>
-  );
-};
+  </div>
+);
 
-// ─── Markdown + Math Renderer ─────────────────────────────────────────────────
-const MathMessage = ({ text }) => {
-  const [ready, setReady] = useState(false);
-  useEffect(() => { loadKaTeX().then(() => setReady(true)); }, []);
+const CodeBlock = ({ text }) => (
+  <div className="cw-code-block">
+    <div className="cw-code-topbar">
+      <div className="cw-dot r" /><div className="cw-dot y" /><div className="cw-dot g" />
+    </div>
+    <div className="cw-code-inner">
+      {addLineNumbers(text).map((line, idx) => (
+        <div key={idx} className="cw-line">
+          <span className="cw-ln">{line.number}</span>
+          <span className="cw-lt">{line.text || '\u00A0'}</span>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 
-  if (!ready) return <p style={{ whiteSpace: 'pre-wrap' }}>{text}</p>;
-
-  // tokenise the whole text
-  const tokens = [];
-  const regex = /(\$\$[\s\S]*?\$\$|```[\w]*\n[\s\S]*?```|`[^`\n]+`|\$[^$\n]+?\$)/g;
-  let last = 0, m, k = 0;
-
-  const renderTextSegment = (seg, key) => {
-    // Convert markdown → HTML
-    const html = seg
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>[\s\S]+?<\/li>)/g, '<ul>$1</ul>')
-      .replace(/\n\n/g, '<br/><br/>')
-      .replace(/\n/g, '<br/>');
-    return <span key={key} dangerouslySetInnerHTML={{ __html: html }} />;
-  };
-
-  while ((m = regex.exec(text)) !== null) {
-    if (m.index > last) tokens.push(renderTextSegment(text.slice(last, m.index), k++));
-    const t = m[0];
-    if (t.startsWith('$$')) {
-      tokens.push(<div key={k++} className="cw-math-block" dangerouslySetInnerHTML={tex(t.slice(2, -2), true)} />);
-    } else if (t.startsWith('```')) {
-      const cm = t.match(/```(\w*)\n?([\s\S]*?)```/);
-      tokens.push(<CodeBlock key={k++} lang={cm?.[1]} code={cm?.[2] || ''} />);
-    } else if (t.startsWith('`')) {
-      tokens.push(<code key={k++} className="cw-inline-code">{t.slice(1, -1)}</code>);
-    } else if (t.startsWith('$')) {
-      tokens.push(<span key={k++} dangerouslySetInnerHTML={tex(t.slice(1, -1), false)} />);
-    }
-    last = m.index + t.length;
-  }
-  if (last < text.length) tokens.push(renderTextSegment(text.slice(last), k++));
-
-  return <div className="cw-md">{tokens}</div>;
-};
-
-// ─── Math quick-insert keys ───────────────────────────────────────────────────
-const KEYS = [
-  { l: 'x²', v: '^2' }, { l: '√', v: 'sqrt(' }, { l: '∫', v: '\\int_a^b f(x)\\,dx' },
-  { l: '∑', v: '\\sum_{n=1}^{N}' }, { l: 'lim', v: '\\lim_{x\\to 0}' },
-  { l: 'd/dx', v: '\\frac{d}{dx}' }, { l: 'Matrix', v: '\\begin{bmatrix}a & b \\\\ c & d\\end{bmatrix}' },
-  { l: 'π', v: '\\pi' }, { l: 'e^x', v: 'e^{x}' }, { l: '∞', v: '\\infty' },
-];
-
-// ─── Format mathjs result ─────────────────────────────────────────────────────
-const fmtResult = (res) => {
-  if (!res && res !== 0) return null;
-  if (typeof res === 'object' && res?.isMatrix) {
-    const arr = res.toArray();
-    if (!Array.isArray(arr[0])) {
-      return `**Answer:**\n$$\\begin{bmatrix}${arr.join(' \\\\ ')}\\end{bmatrix}$$`;
-    }
-    const rows = arr.map(r => r.join(' & ')).join(' \\\\ ');
-    return `**Answer (Matrix):**\n$$\\begin{bmatrix}${rows}\\end{bmatrix}$$`;
-  }
-  const s = typeof res === 'number'
-    ? (Number.isInteger(res) ? res.toString() : +res.toPrecision(10) + '')
-    : String(res);
-  return `**Answer:** \`${s}\``;
-};
-
-// ═══════════════════════════════════════════════════════════════════════════════
+/* ─── Main Component ──────────────────────────────────────────────────────── */
 const ChatWidget = () => {
-  const INIT = [
-    { id: 1, text: "Hi! 👋 I'm **SAVS Bot** — your B.Tech Math & AI assistant.", sender: 'bot', ts: null },
-    { id: 2, text: "I can handle:\n- **Algebra:** `solve(x^2 - 5x + 6, x)`\n- **Matrices:** `[1,2;3,4] * [5,6;7,8]`\n- **Calculus:** `derivative('x^3', 'x')`\n- **Arithmetic:** `2^10`, `sqrt(144)`, `factorial(10)`\n- **LaTeX:** wrap in `$...$` or `$$...$$`\n\nAsk anything — I evaluate locally *and* via Gemini AI.", sender: 'bot', ts: null },
-  ];
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { id: 1, text: "Hi there! 👋", sender: "bot" },
+    { id: 2, text: "Start a chat. We're here to help you 24/7.", sender: "bot" },
+    { id: 3, text: "My name is Code Bot. How can I assist you today?", sender: "bot" },
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+  const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState(INIT);
-  const [inp, setInp] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [mathMode, setMathMode] = useState(true);
-  const [mathLib, setMathLib] = useState(null);
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-  const endRef = useRef(null);
-  const fileRef = useRef(null);
-  const inpRef = useRef(null);
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!inputText.trim() && !selectedFile) return;
 
-  useEffect(() => { loadKaTeX(); loadMathJS().then(setMathLib); }, []);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs, loading]);
+    const userMessage = inputText.trim();
+    setMessages(prev => [...prev, {
+      id: prev.length + 1,
+      text: userMessage || (selectedFile ? `📎 ${selectedFile.name}` : 'Question...'),
+      sender: 'user',
+    }]);
+    setInputText('');
+    setIsLoading(true);
 
-  const push = (text, sender) =>
-    setMsgs(p => [...p, { id: Date.now() + Math.random(), text, sender, ts: new Date().toISOString() }]);
-
-  // ── Local math evaluation ──────────────────────────────────────────────────
-  const evalLocal = useCallback((expr) => {
-    if (!mathLib || !mathMode) return null;
     try {
-      const clean = expr.replace(/×/g, '*').replace(/÷/g, '/');
-      const res = mathLib.evaluate(clean);
-      const fmtd = fmtResult(res);
-      if (fmtd) {
-        const steps = `**Input:** \`${clean}\`\n\n${fmtd}`;
-        return steps;
-      }
-    } catch { /* not a local math expr */ }
-    return null;
-  }, [mathLib, mathMode]);
+      const formData = new FormData();
+      formData.append('message', userMessage);
+      if (selectedFile) formData.append('file', selectedFile);
 
-  const handleSend = async (e) => {
-    e?.preventDefault();
-    const text = inp.trim();
-    if (!text && !file) return;
-
-    push(text || `📎 ${file.name}`, 'user');
-    setInp('');
-    setLoading(true);
-
-    // Try local eval first
-    if (!file) {
-      const local = evalLocal(text);
-      if (local) {
-        setTimeout(() => { push(local, 'bot'); setLoading(false); }, 300);
-        return;
-      }
-    }
-
-    // API call
-    try {
-      const fd = new FormData();
-      const prefix = mathMode
-        ? `You are a mathematics tutor for B.Tech students. Always:
-1. Show step-by-step working.
-2. Use LaTeX: $...$ inline, $$...$$ display.
-3. For matrices use $$\\begin{bmatrix}...\\end{bmatrix}$$.
-4. For code use triple backtick fences.
-5. Be concise but thorough.\n\nQuestion: `
-        : '';
-      fd.append('message', prefix + text);
-      if (file) fd.append('file', file);
-
-      const res = await axios.post('http://localhost:5000/api/gemini', fd, {
-        headers: { 'Content-Type': file ? 'multipart/form-data' : 'application/json' }
+      const response = await axios.post('http://localhost:5000/api/gemini', formData, {
+        headers: { 'Content-Type': selectedFile ? 'multipart/form-data' : 'application/json' },
       });
-      push(res.data.answer || 'Received your message!', 'bot');
-      setFile(null); setPreview(null);
+
+      setMessages(prev => [...prev, {
+        id: prev.length + 1,
+        text: response.data.answer || "I received your message!",
+        sender: 'bot',
+        timestamp: new Date().toISOString(),
+      }]);
+      setSelectedFile(null);
+      setFilePreview(null);
     } catch {
-      push("⚠️ Cannot reach the server. Make sure your backend is running at `http://localhost:5000`.\n\nFor quick math, toggle **Math Mode** ON — I'll compute locally!", 'bot');
+      setMessages(prev => [...prev, {
+        id: prev.length + 1,
+        text: "Sorry, I'm having trouble connecting to the server. Please try again later.",
+        sender: 'bot',
+        timestamp: new Date().toISOString(),
+      }]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleKey = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setFilePreview(ev.target?.result);
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
+    }
   };
 
-  const handleFile = (e) => {
-    const f = e.target.files?.[0]; if (!f) return;
-    setFile(f);
-    if (f.type.startsWith('image/')) {
-      const r = new FileReader(); r.onload = ev => setPreview(ev.target.result); r.readAsDataURL(f);
-    } else setPreview(null);
+  const removeFile = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const insertKey = (v) => {
-    setInp(p => p + (v.startsWith('\\') ? `$${v}$` : v));
-    inpRef.current?.focus();
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(e);
   };
 
-  const fmt = (ts) => ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+  const isLong = (text) => text && text.length > 100;
 
   return (
     <>
-      <style>{STYLES}</style>
-      <div className="cw-root">
-        {open && (
-          <div className="cw-panel">
+      <style>{styles}</style>
+      <GoogleFontsLoader />
+
+      <div className="cw-root bg-green-400 rounded-2xl">
+        {isOpen && (
+          <div className="cw-popup border-blue-300 shadow-lg">
             {/* Header */}
             <div className="cw-header">
-              <div className="cw-avatar">S<div className="cw-dot"/></div>
-              <div>
-                <div className="cw-hname">SAVS Bot</div>
-                <div className="cw-hsub">🟢 Online • {mathMode ? 'Math Mode ON' : 'Chat Mode'}</div>
+              <div className="cw-header-left">
+                <div className="cw-avatar">
+                  S
+                  <div className="cw-avatar-dot" />
+                </div>
+                <div className="cw-header-info">
+                  <div className="cw-header-name">Saif Bot</div>
+                  <div className="cw-header-status">
+                    <span className="cw-status-dot" />
+                    Online · 24/7 Support
+                  </div>
+                </div>
               </div>
-              <div className="cw-hright">
-                <button className={`cw-mtoggle ${mathMode ? 'on' : ''}`} onClick={() => setMathMode(m => !m)}>
-                  ∑ Math {mathMode ? 'ON' : 'OFF'}
-                </button>
-                <button className="cw-closebtn" onClick={() => setOpen(false)}>
-                  <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-              </div>
+              <button className="cw-close" onClick={() => setIsOpen(false)} aria-label="Close chat">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
             </div>
 
-            {/* Messages */}
-            <div className="cw-body">
-              {msgs.map(msg => (
+            {/* Body — new gradient background */}
+            <div className="cw-body bg-lime-300">
+              {messages.map((msg) => (
                 <div key={msg.id} className={`cw-row ${msg.sender}`}>
-                  {msg.sender === 'bot' && <div className="cw-mavatar">S</div>}
+                  {msg.sender === 'bot' && <div className="cw-msg-avatar">S</div>}
                   <div className={`cw-bubble ${msg.sender}`}>
-                    <MathMessage text={msg.text} />
-                    {msg.ts && <span className="cw-time">{fmt(msg.ts)}</span>}
+                    {msg.sender === 'bot' && isLong(msg.text) ? (
+                      <CodeBlock text={msg.text} />
+                    ) : (
+                      <>
+                        <p className="cw-msg-text">{msg.text}</p>
+                        <span className="cw-time">{formatTime(msg.timestamp)}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
-              {loading && (
-                <div className="cw-row bot">
-                  <div className="cw-mavatar">S</div>
-                  <div className="cw-bubble bot"><div className="cw-typing"><span/><span/><span/></div></div>
-                </div>
-              )}
-              <div ref={endRef}/>
+              {isLoading && <TypingBubble />}
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Footer / Input */}
-            <div className="cw-foot">
-              {mathMode && (
-                <div className="cw-mathkeys">
-                  {KEYS.map(k => <button key={k.l} className="cw-mkey" onClick={() => insertKey(k.v)}>{k.l}</button>)}
+            {/* Footer */}
+            <div className="cw-footer">
+              {selectedFile && (
+                <div className="cw-file-preview">
+                  {filePreview ? (
+                    <img src={filePreview} alt="preview" className="cw-file-preview-img" />
+                  ) : (
+                    <span className="cw-file-icon">📎</span>
+                  )}
+                  <div className="cw-file-meta">
+                    <p className="cw-file-name">{selectedFile.name}</p>
+                    <p className="cw-file-size">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+                  </div>
+                  <button className="cw-remove-file" onClick={removeFile} title="Remove">✕</button>
                 </div>
               )}
-              {file && (
-                <div className="cw-fpreview">
-                  {preview ? <img src={preview} alt=""/> : <span>📎</span>}
-                  <span style={{ flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:12 }}>{file.name}</span>
-                  <button className="cw-fremove" onClick={() => { setFile(null); setPreview(null); }}>✕</button>
-                </div>
-              )}
-              <form className="cw-form" onSubmit={handleSend}>
-                <div className="cw-inwrap">
-                  <textarea
-                    ref={inpRef} className="cw-input" rows={1} value={inp}
-                    onChange={e => setInp(e.target.value)} onKeyDown={handleKey}
-                    placeholder={mathMode ? "Try: 2^10, sqrt(144), det([1,2;3,4])…" : "Type your message…"}
-                    disabled={loading}
-                    onInput={e => { e.target.style.height='auto'; e.target.style.height=Math.min(e.target.scrollHeight,100)+'px'; }}
+
+              <form onSubmit={handleSendMessage} className="cw-input-row">
+                <div className="cw-input-wrap">
+                  <input
+                    type="text"
+                    className="cw-text-input"
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder={selectedFile ? "Ask about your file…" : "Type a message…"}
+                    autoFocus
+                    disabled={isLoading}
                   />
-                  <button type="button" className="cw-attachbtn" onClick={() => fileRef.current?.click()} disabled={loading}>
-                    <svg viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
-                  </button>
-                  <input ref={fileRef} type="file" style={{display:'none'}} accept=".pdf,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx" onChange={handleFile}/>
+                  <div className="cw-input-icons">
+                    <button type="button" className="cw-icon-btn" disabled={isLoading}>
+                      <span>😊</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="cw-icon-btn"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isLoading}
+                      title="Attach file"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    accept=".pdf,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx"
+                    style={{ display: 'none' }}
+                  />
                 </div>
-                <button className="cw-sendbtn" type="submit" disabled={(!inp.trim() && !file) || loading}>
-                  <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                <button
+                  type="submit"
+                  disabled={(!inputText.trim() && !selectedFile) || isLoading}
+                  className={`cw-send ${(inputText.trim() || selectedFile) && !isLoading ? 'active' : ''}`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  </svg>
                 </button>
               </form>
-              <div className="cw-credits">Powered by Gemini AI • Math by KaTeX + math.js</div>
+              <div className="cw-powered">Powered by Gemini AI</div>
             </div>
           </div>
         )}
 
-        {/* Toggle button */}
-        <button className="cw-toggle" onClick={() => setOpen(o => !o)} aria-label="Toggle chat">
-          {open
-            ? <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            : <>
-                <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
-                <div className="cw-badge">∑</div>
-              </>
-          }
+        {/* FAB */}
+        <button
+          className={`cw-fab !bg-gradient-to-r from-blue-500 to-purple-500 ${isOpen ? 'open' : ''}`}
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label="Toggle chat"
+        >
+          <div className="cw-fab-icon">
+            {isOpen ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            ) : (
+              <h1 className='text-3xl font-serif  font-semibold'>Ai</h1>
+            )}
+          </div>
+          {/* {!isOpen && <span className="cw-badge">1</span>} */}
         </button>
       </div>
     </>

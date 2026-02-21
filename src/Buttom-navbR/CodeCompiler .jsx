@@ -1,17 +1,162 @@
 /* eslint-disable no-unused-vars */
-import React, { useState, useRef, useCallback } from 'react';
-import { Play, Copy, Trash2, Code2, Download, Terminal, Sparkles, CheckCircle } from 'lucide-react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { Play, Copy, Trash2, Download, Terminal, Sparkles, CheckCircle, X, ChevronRight } from 'lucide-react';
 import './CodeCompiler.css';
-import axios from 'axios';
 import ButtomNav from './Buttom-nav';
 import api from '../utils/api';
 
-// ✅ FIX: Plain axios — NO auth interceptors.
-// The shared `api` utility intercepts 401 and logs out.
-// Piston was returning 401 for bad version → compilerRoute forwarded it → logout.
-// This instance has ZERO interceptors so logout can never be triggered here.
+// ─── Input detector — scans code for stdin patterns per language ──────────────
+const INPUT_PATTERNS = {
+  python: [/\binput\s*\(/],
+  java:   [/\.nextLine\s*\(/, /\.nextInt\s*\(/, /\.nextDouble\s*\(/, /\.next\s*\(/, /Scanner\s*\(/],
+  c:      [/\bscanf\s*\(/, /\bgets\s*\(/, /\bfgets\s*\(/, /\bgetchar\s*\(/],
+  Cpp:    [/\bcin\s*>>/, /\bgetline\s*\(/],
+};
 
-// ─── Single-pass syntax highlighter ──────────────────────────────────────────
+const codeNeedsInput = (code, language) => {
+  const patterns = INPUT_PATTERNS[language] || [];
+  return patterns.some((re) => re.test(code));
+};
+
+// ─── Extract prompt strings from code ────────────────────────────────────────
+const extractPrompts = (code, language) => {
+  const prompts = [];
+  const printPatterns = {
+    python: /print\s*\(\s*["'`]([^"'`]+)["'`]\s*\)/g,
+    java:   /System\.out\.print(?:ln)?\s*\(\s*"([^"]+)"\s*\)/g,
+    c:      /printf\s*\(\s*"([^"\\]+(?:\\.[^"\\]*)*)"/g,
+    Cpp:    /cout\s*<<\s*"([^"]+)"/g,
+  };
+  const re = printPatterns[language];
+  if (!re) return prompts;
+  let m;
+  while ((m = re.exec(code)) !== null) {
+    const txt = m[1].replace(/\\n/g, '').replace(/\\t/g, ' ').trim();
+    if (txt) prompts.push(txt);
+  }
+  return prompts;
+};
+
+// ─── Terminal Input Modal ─────────────────────────────────────────────────────
+const InputModal = ({ language, code, onSubmit, onCancel, accentColor }) => {
+  const [lines, setLines]   = useState(['']);
+  const [active, setActive] = useState(0);
+  const inputRefs           = useRef([]);
+  const prompts             = extractPrompts(code, language);
+
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
+  }, []);
+
+  const handleKey = (e, idx) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (idx === lines.length - 1) {
+        setLines((prev) => [...prev, '']);
+        setActive(idx + 1);
+        setTimeout(() => inputRefs.current[idx + 1]?.focus(), 30);
+      } else {
+        inputRefs.current[idx + 1]?.focus();
+        setActive(idx + 1);
+      }
+    }
+    if (e.key === 'Backspace' && lines[idx] === '' && idx > 0) {
+      e.preventDefault();
+      setLines((prev) => prev.filter((_, i) => i !== idx));
+      setActive(idx - 1);
+      setTimeout(() => inputRefs.current[idx - 1]?.focus(), 30);
+    }
+  };
+
+  const handleChange = (val, idx) => {
+    setLines((prev) => prev.map((l, i) => (i === idx ? val : l)));
+  };
+
+  const handleSubmit = () => {
+    onSubmit(lines.join('\n'));
+  };
+
+  return (
+    <div className="rim-overlay" onClick={(e) => e.target === e.currentTarget && onCancel()}>
+      <div className="rim-box" style={{ '--rim-accent': accentColor }}>
+        {/* Top bar */}
+        <div className="rim-topbar">
+          <div className="rim-dots">
+            <span className="rim-dot" style={{ background: '#ff5f57' }} />
+            <span className="rim-dot" style={{ background: '#febc2e' }} />
+            <span className="rim-dot" style={{ background: '#28c840' }} />
+          </div>
+          <span className="rim-title">
+            <Terminal size={12} /> stdin — program input
+          </span>
+          <button className="rim-close" onClick={onCancel}><X size={14} /></button>
+        </div>
+
+        {/* Info banner */}
+        <div className="rim-banner">
+          <span className="rim-banner-icon">⚡</span>
+          <span>Your program needs <strong>input</strong>. Type each value on a new line, then click <strong>Run</strong>.</span>
+        </div>
+
+        {/* Detected prompts */}
+        {prompts.length > 0 && (
+          <div className="rim-prompts">
+            <p className="rim-prompts-title">Detected input prompts in your code:</p>
+            {prompts.map((p, i) => (
+              <div key={i} className="rim-prompt-chip">
+                <ChevronRight size={11} />
+                <span>{p}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Terminal input area */}
+        <div className="rim-terminal">
+          <div className="rim-term-header">
+            <span className="rim-term-label">$ input stream</span>
+            <span className="rim-term-hint">Enter ↵ = new line &nbsp;·&nbsp; Backspace on empty = remove line</span>
+          </div>
+          <div className="rim-term-body">
+            {lines.map((val, idx) => (
+              <div key={idx} className={`rim-line ${active === idx ? 'rim-line-active' : ''}`}>
+                <span className="rim-line-num">{idx + 1}</span>
+                <span className="rim-cursor-wrap">
+                  <ChevronRight size={12} className="rim-prompt-arrow" />
+                </span>
+                <input
+                  ref={(el) => (inputRefs.current[idx] = el)}
+                  className="rim-input"
+                  value={val}
+                  onChange={(e) => handleChange(e.target.value, idx)}
+                  onKeyDown={(e) => handleKey(e, idx)}
+                  onFocus={() => setActive(idx)}
+                  placeholder={prompts[idx] ? prompts[idx] : `value ${idx + 1}…`}
+                  spellCheck={false}
+                  autoComplete="off"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="rim-term-preview">
+            <span className="rim-preview-label">stdin preview:</span>
+            <code>{lines.join('\\n') || '—'}</code>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="rim-actions">
+          <button className="rim-btn-cancel" onClick={onCancel}>Cancel</button>
+          <button className="rim-btn-run" onClick={handleSubmit} style={{ background: accentColor }}>
+            <Play size={13} fill="currentColor" /> Run with this input
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Syntax highlighter ───────────────────────────────────────────────────────
 const escapeHtml = (s) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -107,13 +252,14 @@ int main() {
 }`,
   };
 
-  const [language, setLanguage] = useState('python');
-  const [code, setCode]         = useState(languageTemplates['python']);
-  const [input, setInput]       = useState('');
-  const [output, setOutput]     = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [copied, setCopied]     = useState(false);
+  const [language, setLanguage]     = useState('python');
+  const [code, setCode]             = useState(languageTemplates['python']);
+  const [input, setInput]           = useState('');
+  const [output, setOutput]         = useState('');
+  const [error, setError]           = useState('');
+  const [loading, setLoading]       = useState(false);
+  const [copied, setCopied]         = useState(false);
+  const [showInputModal, setShowInputModal] = useState(false);
 
   const textareaRef  = useRef(null);
   const highlightRef = useRef(null);
@@ -137,35 +283,55 @@ int main() {
     setOutput(''); setError(''); setInput('');
   };
 
-  // ✅ FIXED: Uses compilerAxios (no interceptors) — errors NEVER cause logout
-  const executeCode = async () => {
-    if (!code.trim()) { setError('Please write some code first!'); return; }
+  // ─── Core run logic (called after input is confirmed) ─────────────────────
+  const runCode = async (stdinValue) => {
     setLoading(true); setOutput(''); setError('');
-
     try {
-      // compilerAxios has no auth interceptors — safe from logout bug
-      const response = await api.post('/compiler', { code, language, input });
+      const response = await api.post('/compiler', { code, language, input: stdinValue });
       const { output: out = '', error: err = '' } = response.data;
-console.log(response.data);
+      console.log(response.data);
       if (err && err.trim()) {
         setError(err);
       } else {
-        setOutput(out || 'Code ran with no output.');
+        setOutput(out.trim() !== '' ? out : '(no output)');
       }
     } catch (err) {
-      // Network / timeout errors — shown as message, never as logout
       if (err.code === 'ECONNABORTED') {
         setError('⏱️ Request timed out. Check for infinite loops.');
       } else if (!err.response) {
         setError('🌐 Cannot reach server. Check your connection.');
       } else {
-        // Even if some HTTP error slips through, just show it — don't logout
         setError(`❌ Server error: ${err.response?.data?.error || err.message}`);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // ─── Run button handler — shows modal if input needed & stdin empty ────────
+  const handleRunClick = () => {
+    if (!code.trim()) { setError('Please write some code first!'); return; }
+
+    const needsInput = codeNeedsInput(code, language);
+    const hasInput   = input.trim() !== '';
+
+    if (needsInput && !hasInput) {
+      // Show the modal so user can provide input interactively
+      setShowInputModal(true);
+    } else {
+      // Stdin already filled or not needed — run directly
+      runCode(input);
+    }
+  };
+
+  // ─── Modal callbacks ───────────────────────────────────────────────────────
+  const handleModalSubmit = (stdinValue) => {
+    setInput(stdinValue);           // also update the stdin box for visibility
+    setShowInputModal(false);
+    runCode(stdinValue);
+  };
+
+  const handleModalCancel = () => setShowInputModal(false);
 
   const copyCode = () => {
     navigator.clipboard.writeText(code);
@@ -192,12 +358,24 @@ console.log(response.data);
   };
 
   const highlighted = highlightCode(code, language);
+  const needsInputBadge = codeNeedsInput(code, language);
 
   return (
     <div className="cc-root">
       <div className="cc-blob cc-blob-a" />
       <div className="cc-blob cc-blob-b" />
       <div className="cc-blob cc-blob-c" />
+
+      {/* ── Runtime Input Modal ── */}
+      {showInputModal && (
+        <InputModal
+          language={language}
+          code={code}
+          accentColor={langMeta[language].accent}
+          onSubmit={handleModalSubmit}
+          onCancel={handleModalCancel}
+        />
+      )}
 
       <div className="cc-wrap">
         <header className="cc-header">
@@ -228,6 +406,12 @@ console.log(response.data);
                 <span style={{ color: langMeta[language].accent }}>{langMeta[language].icon}</span>
                 <span>main.{language === 'python' ? 'py' : language === 'java' ? 'java' : language === 'Cpp' ? 'cpp' : 'c'}</span>
               </div>
+              {/* Input required badge */}
+              {needsInputBadge && (
+                <div className="cc-input-badge" style={{ '--badge-color': langMeta[language].accent }}>
+                  <Terminal size={11} /> stdin required
+                </div>
+              )}
             </div>
             <div className="cc-toolbar-right">
               <button className="cc-icon-btn" onClick={copyCode}>
@@ -242,7 +426,7 @@ console.log(response.data);
               </button>
               <button
                 className="cc-run-btn"
-                onClick={executeCode}
+                onClick={handleRunClick}
                 disabled={loading || !code.trim()}
                 style={{ '--accent': langMeta[language].accent }}
               >
@@ -289,13 +473,19 @@ console.log(response.data);
               </div>
               <div className="cc-stdin">
                 <label className="cc-stdin-label">
-                  <Terminal size={12} /><span>stdin / Input</span>
+                  <Terminal size={12} />
+                  <span>stdin / Input</span>
+                  {needsInputBadge && input.trim() === '' && (
+                    <span className="cc-stdin-hint" style={{ color: langMeta[language].accent }}>
+                      — leave empty to enter interactively when you click Run
+                    </span>
+                  )}
                 </label>
                 <textarea
                   className="cc-stdin-area"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Enter program input here…"
+                  placeholder="Enter program input here, or leave empty to fill interactively…"
                 />
               </div>
             </div>

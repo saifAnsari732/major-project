@@ -532,3 +532,326 @@
   .cc-editor-body { height: 460px; }
   .cc-output-body { min-height: 460px; }
 }
+
+/* ============================================================
+   Runtime Input Modal  (rim-*)
+   Add this to the bottom of CodeCompiler.css
+   ============================================================ */
+
+/* ── Overlay ── */
+.rim-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: rimFadeIn 0.2s ease;
+}
+
+@keyframes rimFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Modal box ── */
+.rim-box {
+  width: 100%;
+  max-width: 520px;
+  background: #0d1520;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7),
+              0 0 0 1px rgba(255,255,255,0.04);
+  animation: rimSlideUp 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes rimSlideUp {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* ── Top bar (macOS style) ── */
+.rim-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.rim-dots { display: flex; gap: 6px; align-items: center; }
+.rim-dot  { width: 11px; height: 11px; border-radius: 50%; }
+
+.rim-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: #5a7080;
+  letter-spacing: 0.3px;
+}
+
+.rim-close {
+  background: none;
+  border: none;
+  color: #3e5168;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.rim-close:hover { color: #f87171; }
+
+/* ── Info banner ── */
+.rim-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.8rem;
+  color: #7a8ba0;
+  line-height: 1.5;
+}
+
+.rim-banner strong { color: var(--rim-accent, #4facfe); }
+.rim-banner-icon   { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+/* ── Detected prompts ── */
+.rim-prompts {
+  padding: 0.75rem 1.1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.rim-prompts-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #3e5168;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.rim-prompt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.2rem 0.55rem;
+  margin: 0.2rem 0.25rem 0.2rem 0;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--rim-accent, #4facfe);
+}
+
+/* ── Terminal input area ── */
+.rim-terminal {
+  background: #070b10;
+  margin: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.07);
+  overflow: hidden;
+}
+
+.rim-term-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.75rem;
+  background: rgba(0,0,0,0.3);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.rim-term-label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: #3e5168;
+  font-weight: 600;
+}
+
+.rim-term-hint {
+  font-size: 0.65rem;
+  color: #2a3a4a;
+  letter-spacing: 0.2px;
+}
+
+.rim-term-body {
+  padding: 0.6rem 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.rim-term-body::-webkit-scrollbar { width: 5px; }
+.rim-term-body::-webkit-scrollbar-thumb {
+  background: var(--rim-accent, #4facfe);
+  border-radius: 3px;
+  opacity: 0.4;
+}
+
+/* ── Each input line ── */
+.rim-line {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 3px 8px;
+  transition: background 0.1s;
+}
+
+.rim-line-active { background: rgba(255,255,255,0.025); }
+
+.rim-line-num {
+  min-width: 28px;
+  text-align: right;
+  padding-right: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #2a3a4a;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.rim-cursor-wrap { flex-shrink: 0; }
+
+.rim-prompt-arrow {
+  color: var(--rim-accent, #4facfe);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.rim-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 2px 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: #e8edf5;
+  caret-color: var(--rim-accent, #4facfe);
+}
+
+.rim-input::placeholder { color: #2a3a4a; font-style: italic; }
+
+/* ── stdin preview ── */
+.rim-term-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  background: rgba(0,0,0,0.2);
+}
+
+.rim-preview-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #2a3a4a;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rim-term-preview code {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--rim-accent, #4facfe);
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Action buttons ── */
+.rim-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.2);
+}
+
+.rim-btn-cancel {
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.09);
+  background: transparent;
+  color: #5a7080;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.rim-btn-cancel:hover { border-color: rgba(255,255,255,0.18); color: #7a8ba0; }
+
+.rim-btn-run {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 8px;
+  border: none;
+  color: #000;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.2px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+}
+.rim-btn-run:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.rim-btn-run:active { transform: translateY(0); }
+
+/* ── stdin hint text ── */
+.cc-stdin-hint {
+  font-size: 0.7rem;
+  font-style: italic;
+  opacity: 0.8;
+  margin-left: 0.25rem;
+}
+
+/* ── Toolbar input badge ── */
+.cc-input-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--badge-color, #4facfe) 35%, transparent);
+  background: color-mix(in srgb, var(--badge-color, #4facfe) 10%, transparent);
+  color: var(--badge-color, #4facfe);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  animation: badgePulse 2.5s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .rim-box { border-radius: 12px; }
+  .rim-term-hint { display: none; }
+  .rim-actions { flex-direction: column; }
+  .rim-btn-cancel, .rim-btn-run { width: 100%; justify-content: center; }
+}
