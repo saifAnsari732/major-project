@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
-import { 
+import {
   Users, FileText, GraduationCap, Building,
   Check, X, Eye, TrendingUp
 } from 'lucide-react';
@@ -11,7 +11,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [pendingPapers, setPendingPapers] = useState([]);
   const [loading, setLoading] = useState(true);
-const navigate = useNavigate();
+  const navigate = useNavigate();
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -22,7 +22,7 @@ const navigate = useNavigate();
         api.get('/admin/dashboard'),
         api.get('/admin/papers/pending')
       ]);
-      
+
       setStats(statsRes.data.data.stats);
       setPendingPapers(papersRes.data.data);
     } catch (error) {
@@ -51,23 +51,23 @@ const navigate = useNavigate();
       toast.error('Failed to reject paper');
     }
   };
-// Add course
-const addcourse = async () =>{
+  // Add course
+  const addcourse = async () => {
     try {
       console.log("dd");
-     const dd= await api.put(`/courses`);
+      const dd = await api.put(`/courses`);
       toast.success('Paper rejected');
     } catch (error) {
       toast.error('Failed to Add Course');
-      
+
     }
-}
+  }
 
-// Add branch
-const addbranch = async (paperId) =>{
+  // Add branch
+  const addbranch = async (paperId) => {
 
-}
-if (loading) {
+  }
+  if (loading) {
     return (
       <>
         {/* <Navbar /> */}
@@ -94,7 +94,7 @@ if (loading) {
         <div className='font-semibold flex justify-start lg:gap-6 md:gap-9 items-center mb-4'>
           <button onClick={() => navigate('/CreateCourse')} className='ml-4 bg-green-400 py-1.5 px-2 rounded-lg text-black'> Course</button>
           <button onClick={() => navigate('/CreateBranch')} className='ml-4 bg-green-400 py-1.5 px-2 rounded-lg text-black'> Branch </button>
-          <button className='ml-4 bg-green-400 py-1.5 px-2 rounded-lg text-black'> Update </button>
+          <button onClick={() => navigate(`/admin/papers`)} className='ml-4 bg-green-400 py-1.5 px-2 rounded-lg text-black'> Update </button>
           <button className='ml-4 bg-green-400 py-1.5 px-2 rounded-lg text-black '> Delete </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -185,6 +185,13 @@ if (loading) {
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         View
+                      </button>
+                      <button
+                        onClick={() => navigate(`/admin/papers/${paper._id}/edit`)}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+                      >
+                        <FileText className="h-4 w-4 mr-2" />
+                        Edit
                       </button>
                       <button
                         onClick={() => handleApprovePaper(paper._id)}

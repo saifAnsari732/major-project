@@ -13,7 +13,6 @@ import ChatWidget from './Buttom-navbR/AI';
 import ViewPaper from './pages/View-paper';
 import SolvePaper from './pages/Solvepaper';
 import CoursePapers from './pages/CoursePapers';
-// import { ChatProvider } from './context/ChatContext'; // ✅
 
 // Lazy load components for better performance
 const Home = lazy(() => import('./pages/Home'));
@@ -26,6 +25,7 @@ const UploadPaper = lazy(() => import('./pages/UploadPaper'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const Chat = lazy(() => import('./pages/Chat'));
+const AdminEditPaper = lazy(() => import('./pages/AdminEditPaper'));
 
 // Loading component
 const LoadingSpinner = () => (
@@ -75,6 +75,7 @@ function AppRoutes() {
         <Route path="/paperview" element={<ViewPaper />} />
         <Route path="/solvepaper" element={<SolvePaper />} />
         <Route path="/course/:courseId/papers" element={<CoursePapers />} />
+        <Route path="/admin/papers/:id/edit" element={<AdminEditPaper />} />
        
         <Route   
           path="/chat"

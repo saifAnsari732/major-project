@@ -70,12 +70,12 @@ const PaperCard = ({ paper, onDownload }) => {
           >
             View
           </Link>
-          <button
+          {/* <button
             onClick={() => onDownload(paper)}
             className="flex-1 text-xs font-medium py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 transition-all flex items-center justify-center gap-1"
           >
             <Download className="h-3.5 w-3.5" /> Solution
-          </button>
+          </button> */}
         </div>
       </div>
     </div>
