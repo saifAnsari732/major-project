@@ -139,7 +139,7 @@ const UploadPaper = () => {
       // Navigate: BCA/MCA → their papers page, others → profile
       const selectedCourse = courses.find(c => c._id === formData.courseId);
       if (selectedCourse && DIRECT_TO_PAPERS.includes(selectedCourse.name)) {
-        navigate(`/course/${formData.courseId}/papers`);
+        // navigate(`/course/${formData.courseId}/papers`);
       } else {
         navigate('/profile');
       }
