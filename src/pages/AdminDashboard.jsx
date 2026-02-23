@@ -176,11 +176,15 @@ const AdminDashboard = () => {
                         <p>Branch: {paper.branch?.name}</p>
                         <p>Uploaded by: {paper.uploadedBy?.name} ({paper.uploadedBy?.email})</p>
                         <p>Year: {paper.year} | Semester: {paper.semester}</p>
+                        <span onClick={() => window.open(paper.backSideFile.url, '_blank')} className="text-blue-600 hover:underline cursor-pointer">back</span>
                       </div>
                     </div>
                     <div className="flex gap-3">
                       <button
-                        onClick={() => window.open(paper.paperFile.url, '_blank')}
+                        onClick={() => {
+                          window.open(paper.paperFile.url, '_blank');
+                        
+                        }}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center"
                       >
                         <Eye className="h-4 w-4 mr-2" />
