@@ -66,7 +66,7 @@ const PaperCard = ({ paper, onDownload }) => {
         <div className="flex gap-2">
           <Link
             to={`/paper/${paper._id}`}
-            className="flex-1 text-center text-xs font-medium py-2 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+            className="flex-1 text-center text-xs font-medium py-2 rounded-lg bg-gradient-to-r from-teal-500 to-blue-900 text-white  transition-colors"
           >
             View
           </Link>
