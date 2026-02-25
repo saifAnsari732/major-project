@@ -641,7 +641,7 @@
     grid-template-columns: repeat(4, 1fr);
   }
 }
-@media (max-width: 441px) {
+@media (max-width: 641px) {
   .footer-grid {
     grid-template-columns: repeat(4, 1fr);
   }

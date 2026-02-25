@@ -40,7 +40,7 @@ const extractPrompts = (code, language) => {
 // ─── Keyword Snippets per language ───────────────────────────────────────────
 const KEYWORD_SNIPPETS = {
   python: [
-    { label: 'print("")',      snippet: 'print("")',                          cursorBack: 2  },
+    { label: 'print("")',      snippet: 'print("Hello world")',                          cursorBack: 2  },
     { label: 'input("")',      snippet: 'input("")',                          cursorBack: 2  },
     { label: 'def func',       snippet: 'def function_name():\n    pass',     cursorBack: 0  },
     { label: 'if / else',      snippet: 'if condition:\n    pass\nelse:\n    pass', cursorBack: 0 },
