@@ -39,14 +39,14 @@ const Home = () => {
     finally { setLoading(false); }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-black via-blue-900 to-blue-800">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-20 w-20 border-4 border-blue-600 border-t-cyan-400 mx-auto mb-6" />
-        <p className="text-blue-300 text-lg font-semibold">Loading amazing content...</p>
-      </div>
-    </div>
-  );
+  // if (loading) return (
+  //   <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-black via-blue-900 to-blue-800">
+  //     <div className="text-center">
+  //       <div className="animate-spin rounded-full h-20 w-20 border-4 border-blue-600 border-t-cyan-400 mx-auto mb-6" />
+  //       <p className="text-blue-300 text-lg font-semibold">Loading amazing content...</p>
+  //     </div>
+  //   </div>
+  // );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-blue-950 to-blue-900">

@@ -48,12 +48,12 @@ const Login = () => {
               <BookOpen className="h-8 w-8 text-white" />
             </div>
             <span className="text-3xl font-bold">
-              <span className="text-white">SAVS</span>
-              <span className="text-cyan-400"> FRIEND</span>
+              <span className="text-white">Code4</span>
+              <span className="text-cyan-400"> YOU</span>
             </span>
           </div>
           <h2 className="text-3xl font-bold text-white">Welcome Back</h2>
-          <p className="text-gray-400 mt-2">Sign in to your account</p>
+          {/* <p className="text-gray-400 mt-2">Sign in to your account</p> */}
         </div>
 
         {/* Form */}
