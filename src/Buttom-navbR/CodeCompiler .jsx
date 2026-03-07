@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Play, Copy, Trash2, Download, Terminal, Sparkles, CheckCircle, X, ChevronRight, Zap } from 'lucide-react';
+import { Play, Copy, Trash2, Download, Terminal, Sparkles, CheckCircle, X, ChevronRight, Zap, ChevronLeft } from 'lucide-react';
 import './CodeCompiler.css';
 import ButtomNav from './Buttom-nav';
 import api from '../utils/api';
@@ -119,11 +119,60 @@ const KEYWORD_SNIPPETS = {
 };
 
 // ─── Keyword Carousel Component ───────────────────────────────────────────────
+// ─── Keyword Carousel Component ───────────────────────────────────────────────
 const KeywordCarousel = ({ language, accentColor, onInsert }) => {
   const keywords = KEYWORD_SNIPPETS[language] || [];
-  const trackRef = useRef(null);
+  const scrollRef = useRef(null);
   const [isPaused, setIsPaused] = useState(false);
   const [flashIdx, setFlashIdx] = useState(null);
+  const scrollDirectionRef = useRef(1);
+
+  // Auto scroll effect
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    let animationFrameId;
+    const scrollSpeed = 0.8;
+
+    const autoScroll = () => {
+      if (!isPaused) {
+        const maxScroll = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+
+        if (maxScroll > 0) {
+          scrollContainer.scrollLeft += scrollSpeed * scrollDirectionRef.current;
+
+          if (scrollContainer.scrollLeft >= maxScroll) {
+            scrollDirectionRef.current = -1;
+          } else if (scrollContainer.scrollLeft <= 0) {
+            scrollDirectionRef.current = 1;
+          }
+        }
+      }
+
+      animationFrameId = requestAnimationFrame(autoScroll);
+    };
+
+    animationFrameId = requestAnimationFrame(autoScroll);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [language, isPaused]);
+
+  // Manual scroll function
+  const handleScroll = (direction) => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+    
+    const scrollAmount = 200;
+    scrollContainer.scrollBy({
+      left: direction * scrollAmount,
+      behavior: 'smooth'
+    });
+  };
 
   const handleClick = (kw, idx) => {
     setFlashIdx(idx);
@@ -135,28 +184,31 @@ const KeywordCarousel = ({ language, accentColor, onInsert }) => {
     <div
       className="kc-wrapper"
       style={{ '--kc-accent': accentColor }}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Left label */}
-      <div className="kc-label">
-        <Zap size={11} />
-        <span>Quick Insert</span>
-      </div>
+      {/* Left Scroll Button */}
+      <button
+        className="kc-scroll-btn kc-scroll-btn-left"
+        onClick={() => handleScroll(-1)}
+        style={{ color: accentColor }}
+      >
+        <ChevronLeft size={16} />
+      </button>
 
       {/* Scrolling track */}
-      <div className="kc-scroll-area">
+      <div 
+        className="kc-scroll-area"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+      >
         <div
-          className={`kc-track ${isPaused ? 'kc-track--paused' : ''}`}
-          ref={trackRef}
-          style={{ '--kc-count': keywords.length }}
+          className="kc-track"
+          ref={scrollRef}
         >
-          {/* Duplicate for seamless loop */}
-          {[...keywords, ...keywords].map((kw, idx) => (
+          {keywords.map((kw, idx) => (
             <button
               key={idx}
-              className={`kc-chip ${flashIdx === idx % keywords.length ? 'kc-chip--flash' : ''}`}
-              onClick={() => handleClick(kw, idx % keywords.length)}
+              className={`kc-chip ${flashIdx === idx ? 'kc-chip--flash' : ''}`}
+              onClick={() => handleClick(kw, idx)}
               title={`Insert: ${kw.snippet}`}
             >
               <span className="kc-chip-dot" />
@@ -166,7 +218,16 @@ const KeywordCarousel = ({ language, accentColor, onInsert }) => {
         </div>
       </div>
 
-      {/* Right fade + icon */}
+      {/* Right Scroll Button */}
+      <button
+        className="kc-scroll-btn kc-scroll-btn-right"
+        onClick={() => handleScroll(1)}
+        style={{ color: accentColor }}
+      >
+        <ChevronRight size={16} />
+      </button>
+
+      {/* Right fade */}
       <div className="kc-fade-right" />
     </div>
   );

@@ -550,3 +550,51 @@
   .rim-actions { flex-direction: column; }
   .rim-btn-cancel, .rim-btn-run { width: 100%; justify-content: center; }
 }
+/* Keyword Carousel Scroll Buttons */
+.kc-scroll-btn {
+  position: relative;
+  z-index: 3;
+  width: 32px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.kc-scroll-btn:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.kc-scroll-btn:active {
+  transform: scale(0.95);
+}
+
+.kc-scroll-btn-left {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.kc-scroll-btn-right {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Update kc-track for proper scrolling */
+.kc-track {
+  display: flex;
+  gap: 8px;
+  padding: 0 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.kc-track::-webkit-scrollbar {
+  display: none;
+}

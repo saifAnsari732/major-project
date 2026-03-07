@@ -5,84 +5,79 @@ import toast from 'react-hot-toast';
 import {
   FileText, Download, Eye, Search, Filter,
   ArrowLeft, Upload, BookOpen, Calendar,
-  ChevronDown, X, Layers
+  ChevronDown, X, Layers, Sparkles, GraduationCap
 } from 'lucide-react';
 
-// ── helpers ────────────────────────────────────────────────────────────────────
-const SEMESTER_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8];
+const SEMESTER_OPTIONS = [1,2,3,4,5,6,7,8];
+const isImage = (url='') => /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i.test(url);
 
-const isImage = (url = '') =>
-  /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i.test(url);
-
-// ── PaperCard ──────────────────────────────────────────────────────────────────
-const PaperCard = ({ paper, onDownload }) => {
+// ── Paper Card ─────────────────────────────────────────────────────────────────
+const PaperCard = ({ paper, onDownload, index }) => {
   const frontUrl = paper?.paperFile?.url;
   const hasBack = !!paper?.backSideFile?.url;
-// console.log("33",paper.course.name);
-  return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden flex flex-col">
+  const semColors = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#fee140','#a18cd1','#f5576c'];
+  const accent = semColors[(paper.semester - 1) % semColors.length];
 
+  return (
+    <div style={{
+      ...C.paperCard,
+      animationDelay: `${index * 0.06}s`,
+    }}
+      onMouseEnter={e => { e.currentTarget.style.transform='translateY(-6px)'; e.currentTarget.style.boxShadow=`0 20px 50px rgba(0,0,0,0.4), 0 0 0 1px ${accent}44`; }}
+      onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow=C.paperCard.boxShadow; }}
+    >
       {/* Thumbnail */}
-      <div className="relative h-40 bg-gradient-to-br from-slate-100 to-blue-50 flex items-center justify-center overflow-hidden">
+      <div style={C.thumb}>
         {frontUrl && isImage(frontUrl) ? (
-          <img src={frontUrl} alt={paper.name} className="w-full h-full object-cover" />
+          <img src={frontUrl} alt={paper.name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
         ) : (
-          <div className="flex flex-col items-center gap-2 text-slate-400">
-            <FileText className="h-10 w-10" />
-            <span className="text-xs">PDF / Document</span>
+          <div style={C.thumbPlaceholder}>
+            <div style={{...C.thumbIcon, background: `linear-gradient(135deg, ${accent}33, ${accent}11)`}}>
+              <FileText size={28} color={accent} />
+            </div>
+            <span style={{fontSize:'11px',color:'#6b7280',marginTop:'8px'}}>PDF / Document</span>
           </div>
         )}
-        {/* badges */}
-        <div className="absolute top-2 left-2 flex gap-1.5">
-          <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+        {/* Gradient overlay */}
+        <div style={C.thumbOverlay} />
+        {/* Badges */}
+        <div style={C.badges}>
+          <span style={{...C.badge, background: accent, boxShadow:`0 2px 8px ${accent}66`}}>
             Sem {paper.semester}
           </span>
           {hasBack && (
-            <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-              <Layers className="h-2.5 w-2.5" /> 2-sided
+            <span style={{...C.badge, background:'rgba(67,233,123,0.9)'}}>
+              <Layers size={9}/> 2-sided
             </span>
           )}
         </div>
-        <span className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">
-          {paper.year}
-        </span>
+        <span style={C.yearBadge}>{paper.year}</span>
       </div>
 
       {/* Body */}
-      <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 mb-1">{paper.name}</h3>
-        <p className="text-xs text-gray-500 mb-1">{paper.subject}</p>
-        {paper.paperCode && (
-          <p className="text-[11px] text-blue-500 font-mono mb-3">{paper.paperCode}</p>
-        )}
+      <div style={C.cardBody}>
+        <div style={{...C.accentLine, background: accent}} />
+        <h3 style={C.cardTitle}>{paper.name}</h3>
+        {paper.subject && <p style={C.cardSub}>{paper.subject}</p>}
+        {paper.paperCode && <p style={{...C.cardCode, color: accent}}>{paper.paperCode}</p>}
 
-        {/* Stats */}
-        <div className="flex items-center gap-3 text-xs text-gray-400 mb-4 mt-auto">
-          <span className="flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{paper.views ?? 0}</span>
-          <span className="flex items-center gap-1"><Download className="h-3.5 w-3.5" />{paper.downloads ?? 0}</span>
+        <div style={C.cardStats}>
+          <span style={C.statItem}><Eye size={12}/>{paper.views ?? 0} views</span>
+          <span style={C.statItem}><Download size={12}/>{paper.downloads ?? 0} dl</span>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2">
-          <Link
-            to={`/paper/${paper._id}`}
-            className="flex-1 text-center text-xs font-medium py-2 rounded-lg bg-gradient-to-r from-teal-500 to-blue-900 text-white  transition-colors"
-          >
-            View
-          </Link>
-          {/* <button
-            onClick={() => onDownload(paper)}
-            className="flex-1 text-xs font-medium py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 transition-all flex items-center justify-center gap-1"
-          >
-            <Download className="h-3.5 w-3.5" /> Solution
-          </button> */}
-        </div>
+        <Link to={`/paper/${paper._id}`} style={{...C.viewBtn, background:`linear-gradient(135deg, ${accent}, ${accent}bb)`}}
+          onMouseEnter={e=>e.currentTarget.style.opacity='0.88'}
+          onMouseLeave={e=>e.currentTarget.style.opacity='1'}
+        >
+          <Eye size={13}/> View Paper
+        </Link>
       </div>
     </div>
   );
 };
 
-// ── Main Page ──────────────────────────────────────────────────────────────────
+// ── Main ───────────────────────────────────────────────────────────────────────
 const CoursePapers = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -91,20 +86,14 @@ const CoursePapers = () => {
   const [papers, setPapers] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // filters
   const [search, setSearch] = useState('');
   const [semFilter, setSemFilter] = useState('');
   const [yearFilter, setYearFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
-  // derived year list
-  const availableYears = [...new Set(papers.map((p) => p.year))].sort((a, b) => b - a);
+  const availableYears = [...new Set(papers.map(p=>p.year))].sort((a,b)=>b-a);
 
-  // ── fetch ──
-  useEffect(() => {
-    fetchCourseAndPapers();
-  }, [courseId]);
+  useEffect(() => { fetchCourseAndPapers(); }, [courseId]);
 
   const fetchCourseAndPapers = async () => {
     setLoading(true);
@@ -114,246 +103,227 @@ const CoursePapers = () => {
         api.get('/papers', { params: { course: courseId, status: 'approved' } }),
       ]);
       setCourse(courseRes.data);
-      console.log("object22",papersRes.data);
       setPapers(papersRes.data.data);
       setFiltered(papersRes.data.data);
-    } catch (error) {
-      toast.error('Failed to load papers');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to load papers'); }
+    finally { setLoading(false); }
   };
 
-  // ── filter logic ──
   useEffect(() => {
-    let result = papers;
-
+    let r = papers;
     if (search.trim()) {
       const q = search.toLowerCase();
-      result = result.filter(
-        (p) =>
-          p.name?.toLowerCase().includes(q) ||
-          p.subject?.toLowerCase().includes(q) ||
-          p.paperCode?.toLowerCase().includes(q)
-      );
+      r = r.filter(p => p.name?.toLowerCase().includes(q) || p.subject?.toLowerCase().includes(q) || p.paperCode?.toLowerCase().includes(q));
     }
-
-    if (semFilter) result = result.filter((p) => String(p.semester) === semFilter);
-    if (yearFilter) result = result.filter((p) => String(p.year) === yearFilter);
-
-    setFiltered(result);
+    if (semFilter) r = r.filter(p => String(p.semester) === semFilter);
+    if (yearFilter) r = r.filter(p => String(p.year) === yearFilter);
+    setFiltered(r);
   }, [search, semFilter, yearFilter, papers]);
 
-  const clearFilters = () => {
-    setSearch('');
-    setSemFilter('');
-    setYearFilter('');
-  };
+  const clearFilters = () => { setSearch(''); setSemFilter(''); setYearFilter(''); };
+  const activeCount = [semFilter, yearFilter].filter(Boolean).length;
 
-  const activeFiltersCount = [semFilter, yearFilter].filter(Boolean).length;
-
-  // ── download ──
   const handleDownload = async (paper) => {
-    try {
-      await api.put(`/papers/${paper._id}/download`);
-      window.open(paper.paperFile?.url, '_blank');
-    } catch {
-      window.open(paper.paperFile?.url, '_blank');
-    }
+    try { await api.put(`/papers/${paper._id}/download`); } catch {}
+    window.open(paper.paperFile?.url, '_blank');
   };
 
-  // ── loading ──
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-14 w-14 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4" />
-          <p className="text-gray-500 font-medium">Loading papers...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div style={{minHeight:'100vh',background:'#080b14',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'16px'}}>
+      <div style={{width:'52px',height:'52px',borderRadius:'50%',border:'3px solid rgba(102,126,234,0.2)',borderTop:'3px solid #667eea',animation:'spin 1s linear infinite'}} />
+      <p style={{color:'#6b7280',fontSize:'14px'}}>Loading papers...</p>
+    </div>
+  );
+
+  const uniqueSems = [...new Set(papers.map(p=>p.semester))].length;
+  const uniqueYears = [...new Set(papers.map(p=>p.year))].length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+    <div style={C.root}>
+      {/* Blobs */}
+      <div style={C.blob1}/><div style={C.blob2}/><div style={C.blob3}/>
 
-      {/* ── Hero header ── */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-          {/* Back button */}
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors text-sm mb-5"
+      {/* ── Hero ── */}
+      <div style={C.hero}>
+        <div style={C.heroBgGlow}/>
+        <div style={C.heroInner}>
+          <button style={C.backBtn}
+            onClick={()=>navigate('/')}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.1)';e.currentTarget.style.color='#fff';}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.05)';e.currentTarget.style.color='#9ca3af';}}
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Home
+            <ArrowLeft size={15}/> Back to Home
           </button>
 
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="bg-gradient-to-br from-cyan-400 to-blue-500 p-2.5 rounded-xl">
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                  {course?.name ?? 'Course'} Papers
-                </h1>
+          <div style={C.heroContent}>
+            <div style={C.heroLeft}>
+              <div style={C.heroBadge}>
+                <Sparkles size={12} color="#a78bfa"/>
+                <span style={{fontSize:'11px',color:'#a78bfa',fontWeight:'700',letterSpacing:'0.5px'}}>COURSE PAPERS</span>
               </div>
-              <p className="text-gray-400 text-sm">
-                Browse and download previous year question papers
-              </p>
+              <h1 style={C.heroTitle}>{course?.name ?? 'Course'}</h1>
+              <p style={C.heroSub}>Browse and download previous year question papers</p>
             </div>
 
-          
-          </div>
-
-          {/* Stats row */}
-          <div className="flex gap-6 mt-6 text-sm">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-white">{papers.length}</p>
-              <p className="text-gray-400 text-xs">Total Papers</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-white">
-                {[...new Set(papers.map((p) => p.semester))].length}
-              </p>
-              <p className="text-gray-400 text-xs">Semesters</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-white">
-                {[...new Set(papers.map((p) => p.year))].length}
-              </p>
-              <p className="text-gray-400 text-xs">Years</p>
+            {/* Stats */}
+            <div style={C.heroStats}>
+              {[
+                {val: papers.length, label:'Total Papers', color:'#667eea'},
+                {val: uniqueSems, label:'Semesters', color:'#f093fb'},
+                {val: uniqueYears, label:'Years', color:'#43e97b'},
+              ].map((s,i)=>(
+                <div key={i} style={C.heroStat}>
+                  <span style={{...C.heroStatVal, color: s.color}}>{s.val}</span>
+                  <span style={C.heroStatLabel}>{s.label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Search + Filters bar ── */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row gap-3">
-
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+      {/* ── Search + Filter Bar ── */}
+      <div style={C.filterBar}>
+        <div style={C.filterInner}>
+          <div style={C.searchWrap}>
+            <Search size={15} color="#6b7280"/>
             <input
-              type="text"
+              style={C.searchInput}
               placeholder="Search by name, subject or paper code..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={e=>setSearch(e.target.value)}
             />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            {search && <button style={C.clearX} onClick={()=>setSearch('')}><X size={13}/></button>}
           </div>
 
-          {/* Filter toggle */}
-          <button
-            onClick={() => setShowFilters((p) => !p)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
-              showFilters || activeFiltersCount > 0
-                ? 'bg-blue-50 border-blue-300 text-blue-700'
-                : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}
+          <button style={{...C.filterBtn, ...(showFilters||activeCount>0 ? C.filterBtnActive : {})}}
+            onClick={()=>setShowFilters(p=>!p)}
           >
-            <Filter className="h-4 w-4" />
+            <Filter size={14}/>
             Filters
-            {activeFiltersCount > 0 && (
-              <span className="bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                {activeFiltersCount}
-              </span>
-            )}
-            <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            {activeCount > 0 && <span style={C.filterCount}>{activeCount}</span>}
+            <ChevronDown size={13} style={{transform: showFilters?'rotate(180deg)':'rotate(0deg)', transition:'0.2s'}}/>
           </button>
         </div>
 
-        {/* Expanded filters */}
+        {/* Expanded */}
         {showFilters && (
-          <div className="border-t border-gray-100 bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap gap-3 items-center">
-              {/* Semester */}
-              <select
-                value={semFilter}
-                onChange={(e) => setSemFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Semesters</option>
-                {SEMESTER_OPTIONS.map((s) => (
-                  <option key={s} value={s}>Semester {s}</option>
-                ))}
-              </select>
-
-              {/* Year */}
-              <select
-                value={yearFilter}
-                onChange={(e) => setYearFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Years</option>
-                {availableYears.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-
-              {/* Clear */}
-              {activeFiltersCount > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700 font-medium"
-                >
-                  <X className="h-3.5 w-3.5" /> Clear filters
-                </button>
-              )}
-            </div>
+          <div style={C.expandedFilters}>
+            <select style={C.select} value={semFilter} onChange={e=>setSemFilter(e.target.value)}>
+              <option value="">All Semesters</option>
+              {SEMESTER_OPTIONS.map(s=><option key={s} value={s}>Semester {s}</option>)}
+            </select>
+            <select style={C.select} value={yearFilter} onChange={e=>setYearFilter(e.target.value)}>
+              <option value="">All Years</option>
+              {availableYears.map(y=><option key={y} value={y}>{y}</option>)}
+            </select>
+            {activeCount > 0 && (
+              <button style={C.clearBtn} onClick={clearFilters}><X size={12}/> Clear all</button>
+            )}
           </div>
         )}
       </div>
 
-      {/* ── Papers grid ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Result count */}
-        <p className="text-sm text-gray-500 mb-5">
-          Showing <span className="font-semibold text-gray-800">{filtered.length}</span> of{' '}
-          <span className="font-semibold text-gray-800">{papers.length}</span> papers
-          {(search || activeFiltersCount > 0) && (
-            <button onClick={clearFilters} className="ml-2 text-blue-600 hover:underline text-xs">
-              Clear all
-            </button>
+      {/* ── Grid ── */}
+      <div style={C.gridWrap}>
+        <p style={C.resultCount}>
+          Showing <strong style={{color:'#e5e7eb'}}>{filtered.length}</strong> of <strong style={{color:'#e5e7eb'}}>{papers.length}</strong> papers
+          {(search || activeCount > 0) && (
+            <button style={C.clearLink} onClick={clearFilters}>Clear all</button>
           )}
         </p>
 
         {filtered.length === 0 ? (
-          <div className="text-center py-20">
-            <FileText className="h-14 w-14 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">No papers found</h3>
-            <p className="text-gray-400 text-sm mb-6">
-              {papers.length === 0
-                ? 'No papers uploaded for this course yet.'
-                : 'Try adjusting your search or filters.'}
+          <div style={C.emptyState}>
+            <div style={C.emptyIcon}><FileText size={32} color="#667eea"/></div>
+            <h3 style={C.emptyTitle}>{papers.length === 0 ? 'No papers yet' : 'No papers found'}</h3>
+            <p style={C.emptySub}>
+              {papers.length === 0 ? 'Be the first to upload a paper for this course!' : 'Try adjusting your search or filters.'}
             </p>
             {papers.length === 0 && (
-              <Link
-                to="/upload"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium text-sm hover:shadow-lg transition-all"
-              >
-                <Upload className="h-4 w-4" /> Be the first to upload!
+              <Link to="/upload" style={C.uploadBtn}>
+                <Upload size={14}/> Upload First Paper
               </Link>
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {filtered.map((paper) => (
-              <PaperCard key={paper._id} paper={paper} onDownload={handleDownload} />
+          <div style={C.grid}>
+            {filtered.map((paper,i)=>(
+              <PaperCard key={paper._id} paper={paper} onDownload={handleDownload} index={i}/>
             ))}
           </div>
         )}
       </div>
     </div>
   );
+};
+
+// ── Styles ─────────────────────────────────────────────────────────────────────
+const C = {
+  root: { minHeight:'100vh', background:'#080b14', fontFamily:"'DM Sans','Segoe UI',sans-serif", position:'relative', overflowX:'hidden' },
+  blob1: { position:'fixed', top:'-150px', left:'-150px', width:'500px', height:'500px', borderRadius:'50%', background:'radial-gradient(circle,rgba(102,126,234,0.1) 0%,transparent 70%)', pointerEvents:'none', zIndex:0 },
+  blob2: { position:'fixed', top:'35%', right:'-100px', width:'400px', height:'400px', borderRadius:'50%', background:'radial-gradient(circle,rgba(240,147,251,0.07) 0%,transparent 70%)', pointerEvents:'none', zIndex:0 },
+  blob3: { position:'fixed', bottom:'-80px', left:'30%', width:'450px', height:'450px', borderRadius:'50%', background:'radial-gradient(circle,rgba(67,233,123,0.06) 0%,transparent 70%)', pointerEvents:'none', zIndex:0 },
+
+  // Hero
+  hero: { position:'relative', background:'linear-gradient(180deg,#0d1030 0%,#080b14 100%)', borderBottom:'1px solid rgba(255,255,255,0.06)', overflow:'hidden', zIndex:1 },
+  heroBgGlow: { position:'absolute', top:'-60px', right:'-60px', width:'500px', height:'400px', background:'radial-gradient(ellipse,rgba(102,126,234,0.15) 0%,transparent 70%)', pointerEvents:'none' },
+  heroInner: { maxWidth:'1200px', margin:'0 auto', padding:'32px 20px 36px', position:'relative', zIndex:1 },
+  backBtn: { display:'flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'10px', padding:'7px 14px', color:'#9ca3af', fontSize:'13px', cursor:'pointer', marginBottom:'24px', transition:'background 0.15s,color 0.15s' },
+  heroContent: { display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:'24px' },
+  heroLeft: { display:'flex', flexDirection:'column', gap:'10px' },
+  heroBadge: { display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(167,139,250,0.1)', border:'1px solid rgba(167,139,250,0.2)', borderRadius:'20px', padding:'4px 12px', width:'fit-content' },
+  heroTitle: { fontSize:'36px', fontWeight:'800', color:'#fff', margin:0, letterSpacing:'-1px', background:'linear-gradient(135deg,#fff 0%,#a78bfa 100%)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' },
+  heroSub: { margin:0, fontSize:'14px', color:'#6b7280' },
+  heroStats: { display:'flex', gap:'32px', flexWrap:'wrap' },
+  heroStat: { display:'flex', flexDirection:'column', alignItems:'center', gap:'2px' },
+  heroStatVal: { fontSize:'30px', fontWeight:'800', lineHeight:1 },
+  heroStatLabel: { fontSize:'11px', color:'#6b7280', fontWeight:'500' },
+
+  // Filter bar
+  filterBar: { position:'sticky', top:0, zIndex:50, background:'rgba(8,11,20,0.92)', backdropFilter:'blur(16px)', borderBottom:'1px solid rgba(255,255,255,0.07)' },
+  filterInner: { maxWidth:'1200px', margin:'0 auto', padding:'12px 20px', display:'flex', gap:'12px', alignItems:'center' },
+  searchWrap: { flex:1, display:'flex', alignItems:'center', gap:'10px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'12px', padding:'10px 14px' },
+  searchInput: { flex:1, background:'transparent', border:'none', outline:'none', color:'#fff', fontSize:'13px' },
+  clearX: { background:'none', border:'none', color:'#6b7280', cursor:'pointer', padding:'2px', display:'flex', alignItems:'center' },
+  filterBtn: { display:'flex', alignItems:'center', gap:'7px', padding:'10px 16px', borderRadius:'12px', border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)', color:'#9ca3af', fontSize:'13px', fontWeight:'600', cursor:'pointer', whiteSpace:'nowrap', transition:'all 0.15s' },
+  filterBtnActive: { background:'rgba(102,126,234,0.12)', border:'1px solid rgba(102,126,234,0.3)', color:'#a78bfa' },
+  filterCount: { background:'#667eea', color:'#fff', fontSize:'10px', fontWeight:'800', borderRadius:'50%', width:'17px', height:'17px', display:'flex', alignItems:'center', justifyContent:'center' },
+  expandedFilters: { maxWidth:'1200px', margin:'0 auto', padding:'12px 20px', display:'flex', gap:'10px', alignItems:'center', flexWrap:'wrap', borderTop:'1px solid rgba(255,255,255,0.06)' },
+  select: { padding:'8px 12px', borderRadius:'10px', border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', color:'#d1d5db', fontSize:'13px', outline:'none', cursor:'pointer' },
+  clearBtn: { display:'flex', alignItems:'center', gap:'5px', background:'rgba(245,87,108,0.1)', border:'1px solid rgba(245,87,108,0.2)', color:'#f5576c', fontSize:'12px', fontWeight:'600', padding:'7px 12px', borderRadius:'8px', cursor:'pointer' },
+
+  // Grid
+  gridWrap: { maxWidth:'1200px', margin:'0 auto', padding:'32px 20px 60px', position:'relative', zIndex:1 },
+  resultCount: { fontSize:'13px', color:'#6b7280', marginBottom:'24px' },
+  clearLink: { background:'none', border:'none', color:'#667eea', fontSize:'12px', cursor:'pointer', marginLeft:'8px', fontWeight:'600' },
+  grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:'20px' },
+
+  // Paper card
+  paperCard: { background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'20px', overflow:'hidden', display:'flex', flexDirection:'column', transition:'transform 0.25s ease,box-shadow 0.25s ease', boxShadow:'0 4px 24px rgba(0,0,0,0.3)', cursor:'default' },
+  thumb: { position:'relative', height:'150px', background:'#111827', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center' },
+  thumbPlaceholder: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', width:'100%', height:'100%' },
+  thumbIcon: { width:'56px', height:'56px', borderRadius:'16px', display:'flex', alignItems:'center', justifyContent:'center' },
+  thumbOverlay: { position:'absolute', inset:0, background:'linear-gradient(to top,rgba(8,11,20,0.7) 0%,transparent 60%)', pointerEvents:'none' },
+  badges: { position:'absolute', top:'10px', left:'10px', display:'flex', gap:'5px', flexWrap:'wrap' },
+  badge: { fontSize:'10px', fontWeight:'700', padding:'3px 8px', borderRadius:'20px', color:'#fff', display:'flex', alignItems:'center', gap:'3px' },
+  yearBadge: { position:'absolute', top:'10px', right:'10px', background:'rgba(0,0,0,0.55)', backdropFilter:'blur(4px)', color:'#fff', fontSize:'10px', fontWeight:'600', padding:'3px 8px', borderRadius:'8px' },
+
+  cardBody: { padding:'16px', display:'flex', flexDirection:'column', flex:1, gap:'4px' },
+  accentLine: { height:'2px', borderRadius:'2px', marginBottom:'10px' },
+  cardTitle: { fontSize:'14px', fontWeight:'700', color:'#e5e7eb', margin:0, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' },
+  cardSub: { fontSize:'12px', color:'#6b7280', margin:0 },
+  cardCode: { fontSize:'11px', fontFamily:'monospace', fontWeight:'600', margin:0 },
+  cardStats: { display:'flex', gap:'14px', marginTop:'auto', paddingTop:'8px' },
+  statItem: { display:'flex', alignItems:'center', gap:'4px', fontSize:'11px', color:'#6b7280' },
+  viewBtn: { display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', marginTop:'12px', padding:'9px', borderRadius:'10px', color:'#fff', fontSize:'12px', fontWeight:'700', textDecoration:'none', transition:'opacity 0.15s', border:'none', cursor:'pointer' },
+
+  // Empty
+  emptyState: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'80px 20px', gap:'12px' },
+  emptyIcon: { width:'80px', height:'80px', borderRadius:'24px', background:'rgba(102,126,234,0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'8px' },
+  emptyTitle: { fontSize:'20px', fontWeight:'700', color:'#fff', margin:0 },
+  emptySub: { fontSize:'14px', color:'#6b7280', margin:0, textAlign:'center' },
+  uploadBtn: { display:'flex', alignItems:'center', gap:'8px', marginTop:'8px', padding:'12px 24px', borderRadius:'14px', background:'linear-gradient(135deg,#667eea,#764ba2)', color:'#fff', fontSize:'13px', fontWeight:'700', textDecoration:'none', boxShadow:'0 8px 24px rgba(102,126,234,0.4)' },
 };
 
 export default CoursePapers;

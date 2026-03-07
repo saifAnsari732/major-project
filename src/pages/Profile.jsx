@@ -1,17 +1,256 @@
 import { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   User, Mail, MapPin, Phone, Edit2, Save, X,
-  FileText, Coins, Calendar, TrendingUp, MessageSquare, Search, Loader
+  FileText, Coins, Calendar, TrendingUp, MessageSquare,
+  Search, Loader, CheckCircle, Clock, XCircle, Star
 } from 'lucide-react';
-import Chat from '../pages/Chat';
 import { useChatContext } from '../context/ChatContext';
 
-const Profile = () => {
+const S = {
+  root: {
+    minHeight: '100vh',
+    background: '#080b14',
+    fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  blob: (top, left, color, size = 400) => ({
+    position: 'fixed', top, left,
+    width: size, height: size, borderRadius: '50%',
+    background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
+    pointerEvents: 'none', zIndex: 0,
+  }),
+  wrap: {
+    position: 'relative', zIndex: 1,
+    maxWidth: '1200px', margin: '0 auto',
+    padding: '32px 16px 80px',
+  },
+
+  // Hero banner
+  hero: {
+    borderRadius: '28px',
+    background: 'linear-gradient(135deg, #1a1040 0%, #0f1a35 50%, #0a1628 100%)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    padding: '40px 36px',
+    marginBottom: '28px',
+    display: 'flex', alignItems: 'center', gap: '28px',
+    flexWrap: 'wrap', position: 'relative', overflow: 'hidden',
+  },
+  heroBg: {
+    position: 'absolute', inset: 0,
+    background: 'radial-gradient(ellipse at 80% 50%, rgba(102,126,234,0.12) 0%, transparent 60%)',
+    pointerEvents: 'none',
+  },
+  avatarRing: {
+    width: '100px', height: '100px', borderRadius: '50%', flexShrink: 0,
+    background: 'linear-gradient(135deg, #667eea, #f093fb)',
+    padding: '3px', position: 'relative',
+  },
+  avatarInner: {
+    width: '100%', height: '100%', borderRadius: '50%',
+    background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '36px', fontWeight: '800', color: '#fff',
+  },
+  onlineDot: {
+    position: 'absolute', bottom: '4px', right: '4px',
+    width: '18px', height: '18px', borderRadius: '50%',
+    background: '#43e97b', border: '3px solid #080b14',
+    boxShadow: '0 0 10px #43e97b',
+  },
+  heroInfo: { flex: 1, minWidth: '200px' },
+  heroName: {
+    fontSize: '28px', fontWeight: '800', color: '#fff',
+    margin: '0 0 4px', letterSpacing: '-0.5px',
+  },
+  heroBio: { fontSize: '14px', color: '#6b7280', margin: '0 0 12px' },
+  heroMeta: { display: 'flex', gap: '16px', flexWrap: 'wrap' },
+  heroMetaItem: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#9ca3af' },
+  heroBtns: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
+  heroBtn: (gradient) => ({
+    display: 'flex', alignItems: 'center', gap: '7px',
+    padding: '10px 20px', borderRadius: '12px', border: 'none',
+    background: gradient, color: '#fff', fontSize: '13px', fontWeight: '600',
+    cursor: 'pointer', transition: 'transform 0.2s, opacity 0.2s',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+  }),
+
+  // Grid
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gap: '20px', marginBottom: '24px',
+  },
+
+  // Card base
+  card: {
+    background: 'rgba(255,255,255,0.025)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    borderRadius: '20px', padding: '24px',
+    backdropFilter: 'blur(10px)',
+  },
+
+  // Stat mini cards
+  statGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '24px',
+  },
+  statCard: (gradient, glow) => ({
+    background: 'rgba(255,255,255,0.025)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: '16px', padding: '20px',
+    display: 'flex', flexDirection: 'column', gap: '10px',
+    position: 'relative', overflow: 'hidden',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    cursor: 'default',
+  }),
+  statIcon: (gradient, glow) => ({
+    width: '42px', height: '42px', borderRadius: '12px',
+    background: gradient, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: `0 6px 20px ${glow}`,
+  }),
+  statVal: { fontSize: '26px', fontWeight: '800', color: '#fff', lineHeight: 1 },
+  statLbl: { fontSize: '11px', color: '#6b7280', fontWeight: '500' },
+
+  // Section title
+  secTitle: { fontSize: '16px', fontWeight: '700', color: '#fff', margin: '0 0 16px' },
+
+  // Info rows
+  infoRow: {
+    display: 'flex', alignItems: 'center', gap: '10px',
+    padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)',
+    fontSize: '13px', color: '#9ca3af',
+  },
+  infoVal: { color: '#d1d5db', fontWeight: '500' },
+
+  // Edit form
+  input: {
+    width: '100%', background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px',
+    padding: '9px 14px', color: '#fff', fontSize: '13px',
+    outline: 'none', boxSizing: 'border-box',
+  },
+  textarea: {
+    width: '100%', background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px',
+    padding: '9px 14px', color: '#fff', fontSize: '13px',
+    outline: 'none', resize: 'vertical', minHeight: '70px', boxSizing: 'border-box',
+  },
+  formRow: { marginBottom: '12px' },
+  formLabel: { fontSize: '11px', color: '#6b7280', fontWeight: '600', marginBottom: '5px', display: 'block' },
+  formBtns: { display: 'flex', gap: '8px', marginTop: '16px' },
+  saveBtn: {
+    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+    padding: '10px', borderRadius: '10px', border: 'none',
+    background: 'linear-gradient(135deg, #43e97b, #38f9d7)',
+    color: '#fff', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+  },
+  cancelBtn: {
+    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+    padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)',
+    background: 'transparent', color: '#9ca3af', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+  },
+
+  // Papers
+  paperCard: {
+    background: 'rgba(255,255,255,0.02)',
+    border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: '14px', padding: '16px 18px',
+    marginBottom: '10px', display: 'flex',
+    alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+    transition: 'border-color 0.2s',
+  },
+  paperName: { fontSize: '14px', fontWeight: '600', color: '#e5e7eb', margin: '0 0 4px' },
+  paperSub: { fontSize: '12px', color: '#6b7280', margin: 0 },
+
+  statusChip: (status) => {
+    const map = {
+      approved: { bg: 'rgba(67,233,123,0.1)', color: '#43e97b', border: 'rgba(67,233,123,0.2)' },
+      pending:  { bg: 'rgba(251,191,36,0.1)',  color: '#fbbf24', border: 'rgba(251,191,36,0.2)' },
+      rejected: { bg: 'rgba(245,87,108,0.1)', color: '#f5576c', border: 'rgba(245,87,108,0.2)' },
+    };
+    const c = map[status] || map.pending;
+    return {
+      fontSize: '11px', fontWeight: '700', padding: '4px 12px',
+      borderRadius: '20px', background: c.bg, color: c.color,
+      border: `1px solid ${c.border}`, whiteSpace: 'nowrap',
+    };
+  },
+
+  // Empty
+  empty: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    justifyContent: 'center', padding: '40px 20px', gap: '10px',
+    color: '#6b7280', fontSize: '13px',
+  },
+  emptyIcon: {
+    width: '56px', height: '56px', borderRadius: '16px',
+    background: 'rgba(255,255,255,0.04)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '6px',
+  },
+
+  // Modal overlay
+  overlay: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+    zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: '16px', backdropFilter: 'blur(6px)',
+  },
+  modal: {
+    background: '#0f1420', border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '24px', width: '100%', maxWidth: '440px',
+    maxHeight: '85vh', overflow: 'hidden',
+    display: 'flex', flexDirection: 'column',
+    boxShadow: '0 40px 100px rgba(0,0,0,0.6)',
+  },
+  modalHeader: {
+    padding: '24px', borderBottom: '1px solid rgba(255,255,255,0.07)',
+    background: 'linear-gradient(135deg, rgba(102,126,234,0.15), rgba(240,147,251,0.1))',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  },
+  modalTitle: { fontSize: '18px', fontWeight: '700', color: '#fff', margin: 0 },
+  modalSub: { fontSize: '12px', color: '#9ca3af', margin: '2px 0 0' },
+  modalClose: {
+    background: 'rgba(255,255,255,0.08)', border: 'none',
+    borderRadius: '10px', padding: '8px', cursor: 'pointer', color: '#9ca3af',
+    display: 'flex', alignItems: 'center',
+  },
+  searchWrap: {
+    padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.07)',
+  },
+  searchInner: {
+    display: 'flex', alignItems: 'center', gap: '10px',
+    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '12px', padding: '10px 14px',
+  },
+  searchInput: {
+    flex: 1, background: 'transparent', border: 'none',
+    outline: 'none', color: '#fff', fontSize: '13px',
+  },
+  usersList: { flex: 1, overflowY: 'auto', padding: '8px' },
+  userRow: {
+    display: 'flex', alignItems: 'center', gap: '12px',
+    padding: '12px', borderRadius: '12px', cursor: 'pointer',
+    transition: 'background 0.15s',
+    marginBottom: '4px',
+  },
+  userAvatar: (name) => {
+    const colors = ['#667eea','#f093fb','#4facfe','#43e97b','#fa709a','#fee140'];
+    const ci = name ? name.charCodeAt(0) % colors.length : 0;
+    return {
+      width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
+      background: `linear-gradient(135deg, ${colors[ci]}, ${colors[(ci+1)%colors.length]})`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '16px', fontWeight: '700', color: '#fff',
+    };
+  },
+  userName: { fontSize: '14px', fontWeight: '600', color: '#e5e7eb', margin: '0 0 2px' },
+  userEmail: { fontSize: '12px', color: '#6b7280', margin: 0 },
+};
+
+export default function Profile() {
   const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(false);
@@ -21,426 +260,252 @@ const Profile = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    bio: user?.bio || '',
-    location: user?.location || '',
-    phone: user?.phone || '',
+    name: user?.name || '', bio: user?.bio || '',
+    location: user?.location || '', phone: user?.phone || '',
     profileImage: user?.profileImage || ''
   });
-
-  // use context
-  const { 
-    fetchChatHistory,
-  setCurrentConversation,
-  setMessages
-   } = useChatContext();
+  const { fetchChatHistory } = useChatContext();
 
   useEffect(() => {
     if (user) {
-      setFormData({
-        name: user.name || '',
-        bio: user.bio || '',
-        location: user.location || '',
-        phone: user.phone || '',
-        profileImage: user.profileImage || ''
-      });
+      setFormData({ name: user.name||'', bio: user.bio||'', location: user.location||'', phone: user.phone||'', profileImage: user.profileImage||'' });
       fetchMyPapers();
     }
   }, [user]);
 
   const fetchMyPapers = async () => {
-    try {
-      const { data } = await api.get('/papers/my-papers');
-      setMyPapers(data.data);
-    } catch (error) {
-      console.error('Failed to fetch papers:', error);
-    }
+    try { const { data } = await api.get('/papers/my-papers'); setMyPapers(data.data); }
+    catch (e) { console.error(e); }
   };
 
-  // Search users for chat
   useEffect(() => {
     const searchUsers = async () => {
-      if (searchQuery.trim().length < 2) {
-        setSearchResults([]);
-        return;
-      }
-
+      if (searchQuery.trim().length < 2) { setSearchResults([]); return; }
       setSearchLoading(true);
       try {
-        const { data } = await api.get('/chat/search/users', {
-          params: { query: searchQuery }
-        });
+        const { data } = await api.get('/chat/search/users', { params: { query: searchQuery } });
         setSearchResults(data.users || []);
-      } catch (error) {
-        console.error('Search failed:', error);
-        toast.error('Failed to search users');
-      } finally {
-        setSearchLoading(false);
-      }
+      } catch { toast.error('Search failed'); }
+      finally { setSearchLoading(false); }
     };
-
-    const timer = setTimeout(searchUsers, 300);
-    return () => clearTimeout(timer);
+    const t = setTimeout(searchUsers, 300);
+    return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // Start chat with a user
   const handleStartChat = (selectedUser) => {
-    setShowChatModal(false);
-    setSearchQuery('');
-    setSearchResults([]);
-    
-    // Create conversation ID (sorted to ensure consistency)
-    const ids = [user._id, selectedUser._id];
+    setShowChatModal(false); setSearchQuery(''); setSearchResults([]);
+    const ids = [user._id, selectedUser._id].sort();
     const conversationId = `${ids[0]}-${ids[1]}`;
-    //  fetchChatHistory();
-    // Navigate to chat page
     navigate('/chat');
-    
-    // Trigger chat context to open this conversation
     setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('openChat', { 
-        detail: { conversationId, userId: selectedUser._id } 
-      }));
+      window.dispatchEvent(new CustomEvent('openChat', { detail: { conversationId, userId: selectedUser._id } }));
     }, 100);
-  };
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      await updateProfile(formData);
-      setEditing(false);
-    } catch (error) {
-      console.error('Update failed:', error);
-    }
+    try { await updateProfile(formData); setEditing(false); }
+    catch (e) { console.error(e); }
   };
 
   const handleCancel = () => {
-    setFormData({
-      name: user.name,
-      bio: user.bio,
-      location: user.location,
-      phone: user.phone,
-      profileImage: user.profileImage
-    });
+    setFormData({ name: user.name, bio: user.bio, location: user.location, phone: user.phone, profileImage: user.profileImage });
     setEditing(false);
   };
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const initial = (formData.name || user?.name || '?').charAt(0).toUpperCase();
+
+  const statCards = [
+    { label: 'Papers Uploaded', value: user?.papersUploaded || 0, icon: FileText, gradient: 'linear-gradient(135deg,#667eea,#764ba2)', glow: 'rgba(102,126,234,0.4)' },
+    { label: 'Coins Earned', value: `${user?.coins||0}/2`, icon: Coins, gradient: 'linear-gradient(135deg,#f6d365,#fda085)', glow: 'rgba(246,211,101,0.4)' },
+    { label: 'Rank', value: `#${Math.floor(Math.random()*100)+1}`, icon: TrendingUp, gradient: 'linear-gradient(135deg,#43e97b,#38f9d7)', glow: 'rgba(67,233,123,0.4)' },
+  ];
+
+  const statusIcon = { approved: <CheckCircle size={12}/>, pending: <Clock size={12}/>, rejected: <XCircle size={12}/> };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50">
+    <div style={S.root}>
+      {/* Blobs */}
+      <div style={S.blob('-100px','-100px','rgba(102,126,234,0.1)',500)} />
+      <div style={S.blob('40%','70%','rgba(240,147,251,0.08)',400)} />
+      <div style={S.blob('70%','-50px','rgba(67,233,123,0.06)',350)} />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Card */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-24">
-              <div className="text-center mb-6">
-                <div className="relative inline-block ">
-                  <h3 className="w-32 h-32 rounded-full border-4 border-cyan-400 mx-auto mb-4 pt-12 text-2xl font-serif font-semibold">{formData.name.split(" ")[0]}</h3>
-                
-                  {user?.isOnline && (
-                    <span className="absolute bottom-6 right-2 h-6 w-6 rounded-full bg-green-400 border-4 border-white"></span>
-                  )}
-                </div>
-                {!editing ? (
-                  <>
-                    <h2 className="text-2xl font-bold text-gray-900">{user?.name}</h2>
-                    <p className="text-gray-600 mt-1">{user?.bio}</p>
-                  </>
-                ) : (
-                  <div className="space-y-2 mt-4">
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="Name"
-                    />
-                    <textarea
-                      name="bio"
-                      value={formData.bio}
-                      onChange={handleChange}
-                      rows="2"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="Bio"
-                    />
-                  </div>
-                )}
-                {/* <Chat/> */}
-              </div>
+      <div style={S.wrap}>
 
-              <div className="space-y-4 mb-6">
-                <div className="flex items-center text-gray-600">
-                  <Mail className="h-5 w-5 mr-3" />
-                  <span className="text-sm">{user?.email}</span>
-                </div>
-                {!editing ? (
-                  <>
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="h-5 w-5 mr-3" />
-                      <span className="text-sm">{user?.location || 'Not specified'}</span>
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Phone className="h-5 w-5 mr-3" />
-                      <span className="text-sm">{user?.phone || 'Not specified'}</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center">
-                      <MapPin className="h-5 w-5 mr-3 text-gray-600" />
-                      <input
-                        type="text"
-                        name="location"
-                        value={formData.location}
-                        onChange={handleChange}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        placeholder="Location"
-                      />
-                    </div>
-                    <div className="flex items-center">
-                      <Phone className="h-5 w-5 mr-3 text-gray-600" />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        placeholder="Phone"
-                      />
-                    </div>
-                  </>
-                )}
-                <div className="flex items-center text-gray-600">
-                  <Calendar className="h-5 w-5 mr-3" />
-                  <span className="text-sm">
-                    Joined {new Date(user?.joinedDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </span>
-                </div>
-              </div>
-
-              {!editing ? (
-                <button
-                  onClick={() => setEditing(true)}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white py-2 rounded-lg transition-all duration-200 flex items-center justify-center"
-                >
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </button>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={handleSubmit}
-                    className="bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Save
-                  </button>
-                  <button
-                    onClick={handleCancel}
-                    className="bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg transition-colors duration-200 flex items-center justify-center"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Cancel
-                  </button>
-                </div>
-              )}
-
-              {!editing && (
-                <button
-                  onClick={() => setShowChatModal(true)}
-                  className="w-full mt-3 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white py-2 rounded-lg transition-all duration-200 flex items-center justify-center"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Start Chat
-                </button>
-              )}
-
-            </div>
-
+        {/* ── Hero Banner ── */}
+        <div style={S.hero}>
+          <div style={S.heroBg} />
+          <div style={S.avatarRing}>
+            <div style={S.avatarInner}>{initial}</div>
+            {user?.isOnline && <div style={S.onlineDot} />}
           </div>
-          {/* Stats and Papers */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex items-center">
-                  <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-3 rounded-xl">
-                    <FileText className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-gray-600 text-sm">Papers Uploaded</p>
-                    <p className="text-2xl font-bold text-gray-900">{user?.papersUploaded || 0}</p>
-                  </div>
-                </div>
-              </div>
 
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex items-center">
-                  <div className="bg-gradient-to-br from-amber-400 to-amber-600 p-3 rounded-xl">
-                    <Coins className="h-6 w-6 text-white" />
+          <div style={S.heroInfo}>
+            {!editing ? (
+              <>
+                <h1 style={S.heroName}>{user?.name}</h1>
+                <p style={S.heroBio}>{user?.bio || 'No bio yet'}</p>
+                <div style={S.heroMeta}>
+                  {user?.email && <span style={S.heroMetaItem}><Mail size={13} color="#667eea" />{user.email}</span>}
+                  {user?.location && <span style={S.heroMetaItem}><MapPin size={13} color="#f093fb" />{user.location}</span>}
+                  {user?.phone && <span style={S.heroMetaItem}><Phone size={13} color="#43e97b" />{user.phone}</span>}
+                  {user?.joinedDate && <span style={S.heroMetaItem}><Calendar size={13} color="#fbbf24" />Joined {new Date(user.joinedDate).toLocaleDateString('en-US',{month:'short',year:'numeric'})}</span>}
+                </div>
+              </>
+            ) : (
+              <form onSubmit={handleSubmit} style={{maxWidth:'480px'}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'10px'}}>
+                  <div style={S.formRow}>
+                    <label style={S.formLabel}>NAME</label>
+                    <input style={S.input} name="name" value={formData.name} onChange={e=>setFormData({...formData,name:e.target.value})} placeholder="Your name" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-gray-600 text-sm">Coins Earned</p>
-                    <p className="text-2xl font-bold text-gray-900">{user?.coins || 0}/2</p>
+                  <div style={S.formRow}>
+                    <label style={S.formLabel}>PHONE</label>
+                    <input style={S.input} name="phone" value={formData.phone} onChange={e=>setFormData({...formData,phone:e.target.value})} placeholder="Phone" />
                   </div>
                 </div>
-              </div>
-
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex items-center">
-                  <div className="bg-gradient-to-br from-green-400 to-green-600 p-3 rounded-xl">
-                    <TrendingUp className="h-6 w-6 text-white" />
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'10px'}}>
+                  <div style={S.formRow}>
+                    <label style={S.formLabel}>LOCATION</label>
+                    <input style={S.input} name="location" value={formData.location} onChange={e=>setFormData({...formData,location:e.target.value})} placeholder="City, Country" />
                   </div>
-                  <div className="ml-4">
-                    <p className="text-gray-600 text-sm">Contribution Rank</p>
-                    <p className="text-2xl font-bold text-gray-900">#{Math.floor(Math.random() * 100) + 1}</p>
+                  <div style={S.formRow}>
+                    <label style={S.formLabel}>BIO</label>
+                    <input style={S.input} name="bio" value={formData.bio} onChange={e=>setFormData({...formData,bio:e.target.value})} placeholder="Short bio" />
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* My Papers */}
-            <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">My Uploaded Papers</h2>
-              
-              {myPapers.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">You haven't uploaded any papers yet</p>
+                <div style={S.formBtns}>
+                  <button type="submit" style={S.saveBtn}><Save size={14}/>Save Changes</button>
+                  <button type="button" onClick={handleCancel} style={S.cancelBtn}><X size={14}/>Cancel</button>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {myPapers.map((paper) => (
-                    <div
-                      key={paper._id}
-                      className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow duration-200"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-gray-900">{paper.name}</h3>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {paper.branch?.name} • {paper.paperCode}
-                          </p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(paper.status)}`}>
-                          {paper.status.charAt(0).toUpperCase() + paper.status.slice(1)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+              </form>
+            )}
           </div>
+
+          {!editing && (
+            <div style={S.heroBtns}>
+              <button style={S.heroBtn('linear-gradient(135deg,#667eea,#764ba2)')} onClick={()=>setEditing(true)}
+                onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'}
+                onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}
+              ><Edit2 size={14}/>Edit Profile</button>
+              <button style={S.heroBtn('linear-gradient(135deg,#f093fb,#f5576c)')} onClick={()=>setShowChatModal(true)}
+                onMouseEnter={e=>e.currentTarget.style.transform='translateY(-2px)'}
+                onMouseLeave={e=>e.currentTarget.style.transform='translateY(0)'}
+              ><MessageSquare size={14}/>Start Chat</button>
+            </div>
+          )}
         </div>
+
+        {/* ── Stat Cards ── */}
+        <div style={S.statGrid}>
+          {statCards.map((c,i) => {
+            const Icon = c.icon;
+            return (
+              <div key={i} style={S.statCard(c.gradient, c.glow)}
+                onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-4px)';e.currentTarget.style.boxShadow=`0 16px 40px ${c.glow}`;}}
+                onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='none';}}
+              >
+                <div style={S.statIcon(c.gradient, c.glow)}><Icon size={18} color="#fff"/></div>
+                <div style={S.statVal}>{c.value}</div>
+                <div style={S.statLbl}>{c.label}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ── My Papers ── */}
+        <div style={S.card}>
+          <h2 style={S.secTitle}>📄 My Uploaded Papers</h2>
+          {myPapers.length === 0 ? (
+            <div style={S.empty}>
+              <div style={S.emptyIcon}><FileText size={24} color="#667eea"/></div>
+              <strong style={{color:'#e5e7eb'}}>No papers yet</strong>
+              <span>Upload your first paper to get started</span>
+            </div>
+          ) : (
+            myPapers.map(paper => (
+              <div key={paper._id} style={S.paperCard}
+                onMouseEnter={e=>e.currentTarget.style.borderColor='rgba(102,126,234,0.35)'}
+                onMouseLeave={e=>e.currentTarget.style.borderColor='rgba(255,255,255,0.06)'}
+              >
+                <div style={{display:'flex',alignItems:'center',gap:'12px',flex:1}}>
+                  <div style={{width:'38px',height:'38px',borderRadius:'10px',background:'rgba(102,126,234,0.12)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                    <FileText size={16} color="#667eea"/>
+                  </div>
+                  <div>
+                    <p style={S.paperName}>{paper.name}</p>
+                    <p style={S.paperSub}>{paper.branch?.name} · {paper.paperCode}</p>
+                  </div>
+                </div>
+                <span style={S.statusChip(paper.status)}>
+                  {statusIcon[paper.status]} {paper.status.charAt(0).toUpperCase()+paper.status.slice(1)}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+
       </div>
 
-      {/* Chat User List Modal */}
+      {/* ── Chat Modal ── */}
       {showChatModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-6 flex justify-between items-center">
+        <div style={S.overlay} onClick={e=>{if(e.target===e.currentTarget){setShowChatModal(false);setSearchQuery('');setSearchResults([]);}}}>
+          <div style={S.modal}>
+            <div style={S.modalHeader}>
               <div>
-                <h3 className="text-xl font-bold text-white">Start Chat</h3>
-                <p className="text-purple-100 text-sm">Select a user to message</p>
+                <p style={S.modalTitle}>Start a Conversation</p>
+                <p style={S.modalSub}>Search and message any user</p>
               </div>
-              <button
-                onClick={() => {
-                  setShowChatModal(false);
-                  setSearchQuery('');
-                  setSearchResults([]);
-                }}
-                className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full p-2 transition-all"
-              >
-                <X className="h-5 w-5" />
+              <button style={S.modalClose} onClick={()=>{setShowChatModal(false);setSearchQuery('');setSearchResults([]);}}>
+                <X size={16}/>
               </button>
             </div>
 
-            {/* Search Box */}
-            <div className="p-4 border-b border-gray-200">
-              <div className="flex items-center bg-gray-100 rounded-lg px-4 py-2">
-                <Search className="h-5 w-5 text-gray-400 mr-2" />
+            <div style={S.searchWrap}>
+              <div style={S.searchInner}>
+                <Search size={15} color="#6b7280"/>
                 <input
-                  type="text"
+                  autoFocus
+                  style={S.searchInput}
                   placeholder="Search by name or email..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent outline-none text-gray-700 placeholder-gray-500"
-                  autoFocus
+                  onChange={e=>setSearchQuery(e.target.value)}
                 />
+                {searchLoading && <Loader size={14} color="#667eea" style={{animation:'spin 1s linear infinite'}}/>}
               </div>
             </div>
 
-            {/* Users List */}
-            <div className="flex-1 overflow-y-auto">
-              {searchLoading && (
-                <div className="flex items-center justify-center py-12">
-                  <Loader className="h-6 w-6 text-purple-500 animate-spin" />
-                </div>
-              )}
-
+            <div style={S.usersList}>
               {!searchLoading && searchQuery.trim().length === 0 && (
-                <div className="p-6 text-center">
-                  <Search className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">Type to search users</p>
+                <div style={{...S.empty, padding:'32px'}}>
+                  <div style={S.emptyIcon}><Search size={22} color="#667eea"/></div>
+                  <span>Type a name or email to find users</span>
                 </div>
               )}
-
               {!searchLoading && searchQuery.trim().length > 0 && searchResults.length === 0 && (
-                <div className="p-6 text-center">
-                  <User className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No users found</p>
+                <div style={{...S.empty, padding:'32px'}}>
+                  <div style={S.emptyIcon}><User size={22} color="#9ca3af"/></div>
+                  <span>No users found for "{searchQuery}"</span>
                 </div>
               )}
-
-              {!searchLoading && searchResults.length > 0 && (
-                <div className="divide-y divide-gray-200">
-                  {searchResults.map((foundUser) => (
-                    <div
-                      key={foundUser._id}
-                      onClick={() => handleStartChat(foundUser)}
-                      className="p-4 hover:bg-purple-50 cursor-pointer transition-colors duration-150 flex items-center justify-between group"
-                    >
-                      <div className="flex items-center flex-1">
-                        <img
-                          src={foundUser.profileImage || 'https://via.placeholder.com/40'}
-                          alt={foundUser.name}
-                          className="h-10 w-10 rounded-full object-cover border-2 border-purple-200"
-                        />
-                        <div className="ml-3 flex-1">
-                          <p className="font-semibold text-gray-900">{foundUser.name}</p>
-                          <p className="text-sm text-gray-500">{foundUser.email}</p>
-                        </div>
-                      </div>
-                      <MessageSquare className="h-5 w-5 text-purple-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  ))}
+              {searchResults.map(u => (
+                <div key={u._id} style={S.userRow}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(102,126,234,0.08)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                  onClick={()=>handleStartChat(u)}
+                >
+                  <div style={S.userAvatar(u.name)}>{u.name?.charAt(0).toUpperCase()}</div>
+                  <div style={{flex:1}}>
+                    <p style={S.userName}>{u.name}</p>
+                    <p style={S.userEmail}>{u.email}</p>
+                  </div>
+                  <MessageSquare size={15} color="#667eea" style={{opacity:0.6}}/>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-export default Profile;
+}

@@ -56,11 +56,10 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 function AppRoutes() {
   return (
     <Suspense fallback={<LoadingSpinner />}>
-      <ChatProvider> 
-      <Navbar/>
-         <ButtomNav/>
-      <Routes>
-        
+       <ChatProvider> 
+        <Navbar/>
+         <ButtomNav/> 
+      <Routes> 
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -76,7 +75,6 @@ function AppRoutes() {
         <Route path="/solvepaper" element={<SolvePaper />} />
         <Route path="/course/:courseId/papers" element={<CoursePapers />} />
         <Route path="/admin/papers/:id/edit" element={<AdminEditPaper />} />
-       
         <Route   
           path="/chat"
           element={
@@ -110,7 +108,7 @@ function AppRoutes() {
           }
         />
       </Routes>
-</ChatProvider>
+      </ChatProvider>
     </Suspense>
   );
 }

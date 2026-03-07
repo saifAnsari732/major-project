@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, X, Loader, Trash2, Reply, CornerUpLeft } from 'lucide-react';
 import { useChatContext } from '../context/ChatContext';
-import { sendMessage, sendTyping, sendStopTyping } from '../services/socketService';
+import { sendMessage, sendTyping, sendStopTyping, getSocket } from '../services/socketService';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import '../styles/Chat.css';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
-// Helper: Get first letter of name as avatar
 const NameAvatar = ({ name = '', size = 40, className = '' }) => {
   const firstLetter = name?.trim()?.charAt(0)?.toUpperCase() || '?';
   const colors = [
@@ -20,7 +19,6 @@ const NameAvatar = ({ name = '', size = 40, className = '' }) => {
     ? name.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % colors.length
     : 0;
   const bg = colors[colorIndex];
-
   return (
     <div
       className={`name-avatar ${className}`}
@@ -39,6 +37,16 @@ const NameAvatar = ({ name = '', size = 40, className = '' }) => {
   );
 };
 
+// ✅ THE ROOT CAUSE FIX:
+// Backend (chatController.js) always sorts IDs before saving:
+//   const ids = [senderId, recipientId].sort();
+//   const conversationId = `${ids[0]}-${ids[1]}`;
+//
+// Frontend was NOT sorting → joined wrong socket room → messageReceived never fired.
+// This helper ensures frontend always generates the same conversationId as backend.
+const buildConversationId = (idA, idB) =>
+  [idA.toString(), idB.toString()].sort().join('-');
+
 const Chat = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -50,7 +58,6 @@ const Chat = () => {
     setMessages,
     typingUsers,
     loading,
-    fetchChatHistory,
     switchConversation,
     closeConversation,
     replyTo,
@@ -58,8 +65,6 @@ const Chat = () => {
   } = useChatContext();
 
   const [messageInput, setMessageInput] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
   const [hoveredMessageId, setHoveredMessageId] = useState(null);
   const [deletingMessageId, setDeletingMessageId] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
@@ -70,17 +75,14 @@ const Chat = () => {
   const inputRef = useRef(null);
   const autoOpenedRef = useRef(false);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Focus input when replying
   useEffect(() => {
     if (replyTo) inputRef.current?.focus();
   }, [replyTo]);
 
-  // Fetch all users
   useEffect(() => {
     const fetchAllUsers = async () => {
       setUsersLoading(true);
@@ -88,7 +90,6 @@ const Chat = () => {
         const response = await api.get('/chat/users');
         setAllUsers(response.data?.users || []);
       } catch (error) {
-        console.error('❌ Error fetching users:', error.response?.data || error.message);
         toast.error('Failed to load users');
         setAllUsers([]);
       } finally {
@@ -98,37 +99,55 @@ const Chat = () => {
     fetchAllUsers();
   }, []);
 
-  // ✅ Listen for openChat event from ChatNotification
-  // This fires when user clicks a notification → open that specific conversation
+  // Sync selectedUserId when notification opens a chat
   useEffect(() => {
     const handleOpenChatEvent = (event) => {
-      const { conversationId, userId } = event.detail;
-      if (userId) {
-        setSelectedUserId(userId); // ✅ Set recipient so messages show correctly
-      }
-      // fetchChatHistory is already called by ChatContext's own openChat listener
-      // but we need selectedUserId set BEFORE messages render
+      const { userId } = event.detail;
+      if (userId) setSelectedUserId(userId);
     };
-
     window.addEventListener('openChat', handleOpenChatEvent);
     return () => window.removeEventListener('openChat', handleOpenChatEvent);
   }, []);
+  // ✅ DIRECT SOCKET LISTENER — bypasses ChatContext, always fresh
+  // This is the guaranteed fix: listen on raw socket directly in Chat component
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
 
-  // Typing handler
+    const handler = (msg) => {
+      if (!currentConversation) return;
+      const normalize = (id) => id?.split('-').sort().join('-');
+      const isSame = normalize(currentConversation) === normalize(msg.conversationId);
+      if (!isSame) return;
+
+      setMessages((prev) => {
+        if (prev.some((m) => m._id === msg._id && !m._id?.startsWith('temp-'))) return prev;
+        const ti = prev.findIndex(
+          (m) => m._id?.startsWith('temp-') &&
+            m.senderId?.toString() === msg.senderId?.toString() &&
+            m.message === msg.message
+        );
+        if (ti !== -1) { const u = [...prev]; u[ti] = { ...msg, isRead: true }; return u; }
+        return [...prev, { ...msg, isRead: true }];
+      });
+    };
+
+    socket.off('messageReceived', handler);
+    socket.on('messageReceived', handler);
+    return () => socket.off('messageReceived', handler);
+  }, [currentConversation, setMessages]);
+
   const handleMessageInput = (e) => {
     setMessageInput(e.target.value);
     if (currentConversation && e.target.value.trim()) {
-      sendTyping(currentConversation, 'typing');
+      sendTyping(currentConversation, user?.name || 'Someone');
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        sendStopTyping(currentConversation);
-      }, 3000);
+      typingTimeoutRef.current = setTimeout(() => sendStopTyping(currentConversation), 3000);
     }
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-
     if (!messageInput.trim()) { toast.error('Message cannot be empty'); return; }
     if (!currentConversation || !selectedUserId) { toast.error('Select a user first'); return; }
 
@@ -142,9 +161,12 @@ const Chat = () => {
       ? { replyTo: { _id: replyTo._id, message: replyTo.message, senderName: replyTo.senderName } }
       : {};
 
+    // ✅ FIXED: sorted conversationId matches backend exactly
+    const conversationId = buildConversationId(userId, selectedUserId);
+
     const optimisticMessage = {
       _id: `temp-${Date.now()}`,
-      conversationId: currentConversation,
+      conversationId,
       senderId: userId,
       senderName: userName,
       recipientId: selectedUserId,
@@ -155,15 +177,16 @@ const Chat = () => {
       isRead: false,
       ...replyContext
     };
-// jqbdjbqefmqegfiuqkfm
+
     setMessages((prev) => [...prev, optimisticMessage]);
     setMessageInput('');
     setReplyTo(null);
     sendStopTyping(currentConversation);
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
+    // ✅ FIXED: socket gets correct sorted conversationId → backend emits to right room
     sendMessage({
-      conversationId: currentConversation,
+      conversationId,
       recipientId: selectedUserId,
       recipientName: selectedUser.name,
       message: messageToSend,
@@ -183,18 +206,15 @@ const Chat = () => {
     }
   };
 
-  // ✅ handleStartChat — uses auth context user._id (no localStorage)
+  // ✅ FIXED: sorted conversationId → user joins correct socket room
   const handleStartChat = useCallback((selectedUser) => {
     const userId = user?._id;
     if (!userId) { toast.error('User not logged in'); return; }
-    const conversationId = `${userId}-${selectedUser._id}`;
+    const conversationId = buildConversationId(userId, selectedUser._id);
     setSelectedUserId(selectedUser._id);
     switchConversation(conversationId);
-    setSearchQuery('');
-    setSearchResults([]);
   }, [switchConversation, user]);
 
-  // Auto-open from profile URL param
   useEffect(() => {
     if (userIdFromProfile && allUsers.length > 0 && !autoOpenedRef.current) {
       const found = allUsers.find((u) => u._id === userIdFromProfile);
@@ -202,7 +222,6 @@ const Chat = () => {
     }
   }, [userIdFromProfile, allUsers, handleStartChat]);
 
-  // Delete a message
   const handleDeleteMessage = async (messageId) => {
     try {
       setDeletingMessageId(messageId);
@@ -212,14 +231,12 @@ const Chat = () => {
         toast.success('Message deleted ✅');
       }
     } catch (error) {
-      console.error('Error deleting message:', error);
       toast.error('Failed to delete message');
     } finally {
       setDeletingMessageId(null);
     }
   };
 
-  // Clear all messages
   const handleClearAllMessages = async () => {
     if (!window.confirm('Delete all messages in this conversation? This cannot be undone.')) return;
     try {
@@ -236,82 +253,68 @@ const Chat = () => {
 
   return (
     <div className="chat-container">
-      {/* ── Sidebar ── */}
-      <div className="chat-sidebar">
-        <div className="chat-header">
-          <h2 className="chat-title">Messages</h2>
-        </div>
-        <div className="conversations-list">
+      <div className="chat-area">
+
+        {/* ══ TOP FIXED: Horizontal scrollable user list ══ */}
+        <div className="chat-users-topbar">
           {usersLoading ? (
-            <div className="empty-state">
-              <div className="loading-spinner">⌛</div>
-              <p>Loading users...</p>
+            <div className="topbar-loading">
+              <Loader size={15} className="animate-spin" />
+              <span>Loading...</span>
             </div>
           ) : allUsers.length === 0 ? (
-            <div className="empty-state">
-              <p>No users found</p>
-              <p className="empty-hint">Try refreshing the page</p>
-            </div>
+            <div className="topbar-loading"><span>No users found</span></div>
           ) : (
             allUsers.map((u) => (
               <div
                 key={u._id}
-                className={`conversation-item ${selectedUserId === u._id ? 'active' : ''}`}
+                className={`topbar-user ${selectedUserId === u._id ? 'active' : ''}`}
                 onClick={() => handleStartChat(u)}
               >
-                <NameAvatar name={u.name} size={40} />
-                <div className="conversation-content">
-                  <p className="conversation-name">{u.name}</p>
-                  <p className="conversation-last-message">{u.email}</p>
+                <div className="topbar-avatar-wrap">
+                  <NameAvatar name={u.name} size={46} />
+                  {selectedUserId === u._id && <span className="topbar-active-dot" />}
                 </div>
+                <span className="topbar-user-name">{u.name.split(' ')[0]}</span>
               </div>
             ))
           )}
         </div>
-      </div>
 
-      {/* ── Chat Area ── */}
-      <div className="chat-area">
         {currentConversation ? (
           <>
-            {/* Chat Header */}
+            {/* ══ CHAT HEADER ══ */}
             <div className="chat-area-header">
               <div className="recipient-info">
                 {currentRecipient ? (
                   <>
-                    <NameAvatar name={currentRecipient.name} size={42} />
-                    <div style={{ marginLeft: 12 }}>
+                    <NameAvatar name={currentRecipient.name} size={38} />
+                    <div style={{ marginLeft: 10 }}>
                       <p className="recipient-name">{currentRecipient.name}</p>
                       <p className="recipient-status">Active now</p>
                     </div>
                   </>
                 ) : (
-                  <>
-                    <NameAvatar name="?" size={42} />
-                    <div style={{ marginLeft: 12 }}>
-                      <p className="recipient-name">Loading...</p>
-                      <p className="recipient-status">Connecting...</p>
-                    </div>
-                  </>
+                  <p className="recipient-name">Loading...</p>
                 )}
               </div>
               <div className="chat-header-actions">
                 {messages.length > 0 && (
-                  <button className="clear-chat-btn" onClick={handleClearAllMessages} title="Clear all messages">
-                    <Trash2 size={20} />
+                  <button className="clear-chat-btn" onClick={handleClearAllMessages} title="Clear all">
+                    <Trash2 size={18} />
                   </button>
                 )}
                 <button className="close-chat-btn" onClick={closeConversation}>
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
             </div>
 
-            {/* Messages */}
+            {/* ══ MIDDLE SCROLLABLE: Messages ══ */}
             <div className="messages-container">
               {loading ? (
                 <div className="no-messages">
-                  <Loader size={24} className="animate-spin" />
+                  <Loader size={22} className="animate-spin" />
                   <p>Loading messages...</p>
                 </div>
               ) : messages.length === 0 ? (
@@ -332,29 +335,24 @@ const Chat = () => {
                       onMouseEnter={() => setHoveredMessageId(message._id)}
                       onMouseLeave={() => setHoveredMessageId(null)}
                     >
-                      {!isSent && <NameAvatar name={senderName} size={32} className="message-avatar" />}
+                      {!isSent && <NameAvatar name={senderName} size={30} className="message-avatar" />}
 
                       <div className="message-wrapper">
                         {message.replyTo && (
                           <div className={`reply-preview ${isSent ? 'reply-sent' : 'reply-received'}`}>
-                            <CornerUpLeft size={12} style={{ marginRight: 4, flexShrink: 0 }} />
+                            <CornerUpLeft size={11} style={{ marginRight: 4, flexShrink: 0 }} />
                             <span className="reply-sender">{message.replyTo.senderName}</span>
                             <span className="reply-text">{message.replyTo.message}</span>
                           </div>
                         )}
-
                         <div className="message-bubble">
-                          <span className="message-sender-name">
-                            {isSent ? null : senderName}
-                          </span>
+                          {!isSent && <span className="message-sender-name">{senderName}</span>}
                           <p>{message.message}</p>
                           <div className="message-meta">
                             <span className="message-time">
                               {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
-                            {isSent && (
-                              <span className="read-status">{message.isRead ? '✓✓' : '✓'}</span>
-                            )}
+                            {isSent && <span className="read-status">{message.isRead ? '✓✓' : '✓'}</span>}
                           </div>
                         </div>
 
@@ -362,10 +360,14 @@ const Chat = () => {
                           <div className={`message-actions ${isSent ? 'actions-sent' : 'actions-received'}`}>
                             <button
                               className="action-btn reply-btn"
-                              onClick={() => setReplyTo({ _id: message._id, message: message.message, senderName: isSent ? 'You' : senderName })}
+                              onClick={() => setReplyTo({
+                                _id: message._id,
+                                message: message.message,
+                                senderName: isSent ? 'You' : senderName
+                              })}
                               title="Reply"
                             >
-                              <Reply size={14} />
+                              <Reply size={13} />
                             </button>
                             {isSent && !message._id?.startsWith('temp-') && (
                               <button
@@ -375,15 +377,15 @@ const Chat = () => {
                                 title="Delete"
                               >
                                 {deletingMessageId === message._id
-                                  ? <Loader size={14} className="animate-spin" />
-                                  : <Trash2 size={14} />}
+                                  ? <Loader size={13} className="animate-spin" />
+                                  : <Trash2 size={13} />}
                               </button>
                             )}
                           </div>
                         )}
                       </div>
 
-                      {isSent && <NameAvatar name={currentUserName} size={32} className="message-avatar" />}
+                      {isSent && <NameAvatar name={currentUserName} size={30} className="message-avatar" />}
                     </div>
                   );
                 })
@@ -391,50 +393,49 @@ const Chat = () => {
 
               {Object.keys(typingUsers).length > 0 && (
                 <div className="typing-indicator">
-                  <NameAvatar name={Object.values(typingUsers)[0]} size={28} />
+                  <NameAvatar name={Object.values(typingUsers)[0]} size={26} />
                   <div className="typing-bubble"><span /><span /><span /></div>
                   <p>{Object.values(typingUsers).join(', ')} is typing...</p>
                 </div>
               )}
-
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Reply Preview Bar */}
-            {replyTo && (
-              <div className="reply-bar">
-                <CornerUpLeft size={16} className="reply-bar-icon" />
-                <div className="reply-bar-content">
-                  <span className="reply-bar-name">Replying to <strong>{replyTo.senderName}</strong></span>
-                  <span className="reply-bar-msg">{replyTo.message}</span>
+            {/* ══ BOTTOM FIXED: Reply bar + Input ══ */}
+            <div className="chat-bottom-fixed">
+              {replyTo && (
+                <div className="reply-bar">
+                  <CornerUpLeft size={14} className="reply-bar-icon" />
+                  <div className="reply-bar-content">
+                    <span className="reply-bar-name">Replying to <strong>{replyTo.senderName}</strong></span>
+                    <span className="reply-bar-msg">{replyTo.message}</span>
+                  </div>
+                  <button className="reply-bar-cancel" onClick={() => setReplyTo(null)}>
+                    <X size={14} />
+                  </button>
                 </div>
-                <button className="reply-bar-cancel" onClick={() => setReplyTo(null)} title="Cancel reply">
-                  <X size={16} />
+              )}
+              <form className="message-input-form" onSubmit={handleSendMessage}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder={replyTo ? `Reply to ${replyTo.senderName}...` : 'Type a message...'}
+                  value={messageInput}
+                  onChange={handleMessageInput}
+                  className="message-input"
+                  autoComplete="off"
+                />
+                <button type="submit" className="send-btn" aria-label="Send">
+                  <Send size={20} strokeWidth={2.5} />
                 </button>
-              </div>
-            )}
-
-            {/* Message Input */}
-            <form className="message-input-form" onSubmit={handleSendMessage}>
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder={replyTo ? `Reply to ${replyTo.senderName}...` : 'Type a message...'}
-                value={messageInput}
-                onChange={handleMessageInput}
-                className="message-input"
-                autoComplete="off"
-              />
-              <button type="submit" className="send-btn" title="Send message" aria-label="Send message">
-                <Send size={22} strokeWidth={2.5} />
-              </button>
-            </form>
+              </form>
+            </div>
           </>
         ) : (
           <div className="chat-empty">
             <div className="empty-icon">💬</div>
             <h3>No conversation selected</h3>
-            <p>Select a user from the sidebar to start chatting</p>
+            <p>Pick a user above to start chatting</p>
           </div>
         )}
       </div>

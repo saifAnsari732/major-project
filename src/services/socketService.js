@@ -6,163 +6,57 @@ let socket = null;
 
 export const initializeSocket = (token) => {
   if (socket) {
-    socket.disconnect();
-  }
-
-  socket = io(API_URL, {
-    auth: {
-      token
-    },
-    transports: ['websocket', 'polling'],
-    reconnection: true,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    reconnectionAttempts: 5
-  });
-
-  socket.on('connect', () => {
-    console.log('✅ Connected to socket server');
-  });
-
-  socket.on('disconnect', () => {
-    console.log('❌ Disconnected from socket server');
-  });
-
-  socket.on('error', (error) => {
-    console.error('❌ Socket error:', error);
-  });
-
-  return socket;
-};
-
-export const getSocket = () => {
-  return socket;
-};
-
-export const disconnectSocket = () => {
-  if (socket) {
+    socket.removeAllListeners();
     socket.disconnect();
     socket = null;
   }
+
+  socket = io(API_URL, {
+    auth: { token },
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionAttempts: 10
+  });
+
+  return socket;
 };
 
-// Chat event handlers
+export const getSocket = () => socket;
+
+export const disconnectSocket = () => {
+  if (socket) { socket.disconnect(); socket = null; }
+};
+
 export const joinConversation = (conversationId) => {
-  if (socket) {
+  if (socket?.connected) {
     socket.emit('joinConversation', conversationId);
+    console.log('📍 joinConversation:', conversationId);
+  } else {
+    // Wait for connect then join
+    socket?.once('connect', () => {
+      socket.emit('joinConversation', conversationId);
+      console.log('📍 joinConversation (after connect):', conversationId);
+    });
   }
 };
 
-export const leaveConversation = (conversationId) => {
-  if (socket) {
-    socket.emit('leaveConversation', conversationId);
-  }
-};
+export const leaveConversation = (id) => { if (socket) socket.emit('leaveConversation', id); };
+export const sendMessage = (data) => { if (socket) socket.emit('sendMessage', data); };
+export const sendTyping = (conversationId, userName) => { if (socket) socket.emit('typing', { conversationId, userName }); };
+export const sendStopTyping = (conversationId) => { if (socket) socket.emit('stopTyping', conversationId); };
+export const markAsRead = (conversationId, messageIds) => { if (socket) socket.emit('markAsRead', { conversationId, messageIds }); };
 
-export const sendMessage = (data) => {
-  if (socket) {
-    socket.emit('sendMessage', data);
-  }
-};
-
-export const sendTyping = (conversationId, userName) => {
-  if (socket) {
-    socket.emit('typing', { conversationId, userName });
-  }
-};
-
-export const sendStopTyping = (conversationId) => {
-  if (socket) {
-    socket.emit('stopTyping', conversationId);
-  }
-};
-
-export const markAsRead = (conversationId, messageIds) => {
-  if (socket) {
-    socket.emit('markAsRead', { conversationId, messageIds });
-  }
-};
-
-// Event listeners
-export const onMessageReceived = (callback) => {
-  if (socket) {
-    // Remove old listener to prevent duplicates
-    socket.off('messageReceived');
-    // Add new listener
-    socket.on('messageReceived', callback);
-  }
-};
-
-export const onMessageNotification = (callback) => {
-  if (socket) {
-    socket.on('newMessageNotification', callback);
-  }
-};
-
-export const onUserTyping = (callback) => {
-  if (socket) {
-    socket.on('userTyping', callback);
-  }
-};
-
-export const onUserStoppedTyping = (callback) => {
-  if (socket) {
-    socket.on('userStoppedTyping', callback);
-  }
-};
-
-export const onMessagesRead = (callback) => {
-  if (socket) {
-    socket.on('messagesRead', callback);
-  }
-};
-
-export const onUserJoined = (callback) => {
-  if (socket) {
-    socket.on('userJoined', callback);
-  }
-};
-
-export const onUserLeft = (callback) => {
-  if (socket) {
-    socket.on('userLeft', callback);
-  }
-};
-
-export const onUsersOnline = (callback) => {
-  if (socket) {
-    socket.on('usersOnline', callback);
-  }
-};
-
-export const onUserOffline = (callback) => {
-  if (socket) {
-    socket.on('userOffline', callback);
-  }
-};
-
-export const onNewMessageNotification = (callback) => {
-  if (socket) {
-    socket.off('newMessageNotification');
-    socket.on('newMessageNotification', callback);
-  }
-};
-
-// Remove listeners
-export const offMessageReceived = () => {
-  if (socket) {
-    socket.off('messageReceived');
-  }
-};
-
-export const offUserTyping = () => {
-  if (socket) {
-    socket.off('userTyping');
-  }
-};
-
-export const offUserStoppedTyping = () => {
-  if (socket) {
-    socket.off('userStoppedTyping');
-  }
-};
+export const onUserTyping = (cb) => { if (socket) { socket.off('userTyping'); socket.on('userTyping', cb); } };
+export const onUserStoppedTyping = (cb) => { if (socket) { socket.off('userStoppedTyping'); socket.on('userStoppedTyping', cb); } };
+export const onMessagesRead = (cb) => { if (socket) { socket.off('messagesRead'); socket.on('messagesRead', cb); } };
+export const onNewMessageNotification = (cb) => { if (socket) { socket.off('newMessageNotification'); socket.on('newMessageNotification', cb); } };
+export const offUserTyping = () => { if (socket) socket.off('userTyping'); };
+export const offUserStoppedTyping = () => { if (socket) socket.off('userStoppedTyping'); };
+export const onMessageReceived = (cb) => { if (socket) { socket.off('messageReceived'); socket.on('messageReceived', cb); } };
+export const offMessageReceived = () => { if (socket) socket.off('messageReceived'); };
+export const onMessageNotification = (cb) => { if (socket) { socket.off('newMessageNotification'); socket.on('newMessageNotification', cb); } };
+export const onUserJoined = (cb) => { if (socket) socket.on('userJoined', cb); };
+export const onUserLeft = (cb) => { if (socket) socket.on('userLeft', cb); };
+export const onUsersOnline = (cb) => { if (socket) socket.on('usersOnline', cb); };
+export const onUserOffline = (cb) => { if (socket) socket.on('userOffline', cb); };

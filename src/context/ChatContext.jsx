@@ -4,24 +4,20 @@ import {
   disconnectSocket,
   joinConversation,
   leaveConversation,
-  onMessageReceived,
-  offMessageReceived,
   onUserTyping,
   onUserStoppedTyping,
   offUserTyping,
   offUserStoppedTyping,
   onMessagesRead,
-  onNewMessageNotification
 } from '../services/socketService';
 import { useAuth } from './AuthContext';
 import api from '../utils/api';
 
 const ChatContext = createContext();
-
 export const useChatContext = () => {
-  const context = useContext(ChatContext);
-  if (!context) throw new Error('useChatContext must be used within ChatProvider');
-  return context;
+  const ctx = useContext(ChatContext);
+  if (!ctx) throw new Error('useChatContext must be used within ChatProvider');
+  return ctx;
 };
 
 export const ChatProvider = ({ children }) => {
@@ -33,221 +29,139 @@ export const ChatProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [notifications, setNotifications] = useState([]);  // ✅ incoming only
+  const [notifications, setNotifications] = useState([]);
   const [replyTo, setReplyTo] = useState(null);
 
   const currentConversationRef = useRef(null);
-  const messagesRef = useRef([]);
+  const userIdRef = useRef(null);
+  const socketRef = useRef(null);
 
   useEffect(() => { currentConversationRef.current = currentConversation; }, [currentConversation]);
-  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { userIdRef.current = user?._id?.toString(); }, [user]);
 
-  // Initialize socket
-  useEffect(() => {
-    if (user && token) {
-      initializeSocket(token);
-      fetchConversations();
-      fetchUnreadCount();
-      return () => disconnectSocket();
-    }
-  }, [user, token]);
+  const fetchUnreadCount = useCallback(async () => {
+    try { const r = await api.get('/chat/unread-count'); setUnreadCount(r.data.unreadCount || 0); } catch {}
+  }, []);
 
   const fetchConversations = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/chat/conversations');
-      setConversations(response.data.conversations || []);
-    } catch (error) {
-      console.error('❌ Error fetching conversations:', error.response?.data || error.message);
-    } finally {
-      setLoading(false);
-    }
+    try { const r = await api.get('/chat/conversations'); setConversations(r.data.conversations || []); } catch {}
   }, []);
 
   const fetchChatHistory = useCallback(async (conversationId) => {
     try {
       setLoading(true);
-      const response = await api.get(`/chat/history/${conversationId}`);
-      const fetchedMessages = response.data.messages || [];
-      setMessages(fetchedMessages);
+      const r = await api.get(`/chat/history/${conversationId}`);
+      console.log(r.data);
+      setMessages(r.data.messages || []);
       setCurrentConversation(conversationId);
       joinConversation(conversationId);
-      console.log(`✅ Fetched ${fetchedMessages.length} messages for:`, conversationId);
-    } catch (error) {
-      console.log('ℹ️ No history — fresh conversation:', conversationId);
+    } catch {
       setMessages([]);
       setCurrentConversation(conversationId);
       joinConversation(conversationId);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, []);
 
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const response = await api.get('/chat/unread-count');
-      setUnreadCount(response.data.unreadCount || 0);
-    } catch (error) {
-      console.error('❌ Error fetching unread count:', error.response?.data || error.message);
-    }
-  }, []);
-
-  const searchUsers = useCallback(async (query) => {
-    try {
-      const response = await api.get('/chat/search/users', { params: { query } });
-      return response.data.users || [];
-    } catch (error) {
-      console.error('❌ Error searching users:', error.response?.data || error.message);
-      return [];
-    }
-  }, []);
-
-  // ✅ CORE: Handle incoming socket messages
   useEffect(() => {
-    const handleMessageReceived = (message) => {
-      const activeChatId = currentConversationRef.current;
-      const currentMessages = messagesRef.current;
-      const loggedInUserId = user?._id?.toString();
+    if (!user?._id || !token) return;
+    if (socketRef.current) { socketRef.current.disconnect(); socketRef.current = null; }
 
-      // ✅ Only show notification for INCOMING messages (not sent by me)
-      const isIncoming = message.senderId?.toString() !== loggedInUserId;
+    const s = initializeSocket(token);
+    socketRef.current = s;
+    fetchConversations();
+    fetchUnreadCount();
 
-      if (activeChatId && message.conversationId === activeChatId) {
-        // Currently viewing this conversation → add to messages
-        const realMessageExists = currentMessages.some(
-          (msg) => msg._id === message._id && !msg._id?.startsWith('temp-')
-        );
-        if (realMessageExists) return;
+    const attach = () => {
+      s.off('messageReceived');
+      s.on('messageReceived', (msg) => {
+        const activeChatId = currentConversationRef.current;
+        const myId = userIdRef.current;
+        const normalize = (id) => id?.split('-').sort().join('-');
 
-        const matchingTempIndex = currentMessages.findIndex(
-          (msg) =>
-            msg._id?.startsWith('temp-') &&
-            msg.senderId?.toString() === message.senderId?.toString() &&
-            msg.message === message.message
-        );
+        // ✅ Check if this message belongs to currently open conversation
+        const isSame = activeChatId &&
+          normalize(activeChatId) === normalize(msg.conversationId);
+        const isMyOwn = msg.senderId?.toString() === myId;
 
-        if (matchingTempIndex !== -1) {
+        if (isSame) {
+          // ✅ Add to current chat immediately
           setMessages((prev) => {
-            const updated = [...prev];
-            updated[matchingTempIndex] = { ...message, isRead: true };
-            return updated;
+            if (prev.some((m) => m._id === msg._id && !m._id?.startsWith('temp-'))) return prev;
+            const ti = prev.findIndex(
+              (m) => m._id?.startsWith('temp-') &&
+                m.senderId?.toString() === msg.senderId?.toString() &&
+                m.message === msg.message
+            );
+            if (ti !== -1) { const u = [...prev]; u[ti] = { ...msg, isRead: true }; return u; }
+            return [...prev, { ...msg, isRead: true }];
           });
-        } else {
-          setMessages((prev) => [...prev, { ...message, isRead: true }]);
+        } else if (!isMyOwn) {
+          // ✅ Different conversation — show notification
+          setNotifications((prev) => {
+            if (prev.some((n) => n._id === msg._id)) return prev;
+            return [msg, ...prev];
+          });
+          fetchUnreadCount();
         }
-      } else if (isIncoming) {
-        // ✅ Not viewing this conversation + message is incoming → show notification
-        setNotifications((prev) => {
-          // Avoid duplicate notifications for same message
-          const alreadyExists = prev.some((n) => n._id === message._id);
-          if (alreadyExists) return prev;
-          return [message, ...prev];
-        });
-        fetchUnreadCount();
-      }
-    };
-
-    onMessageReceived(handleMessageReceived);
-    return () => offMessageReceived();
-  }, [fetchUnreadCount, user?._id]);
-
-  // New message notification (badge count)
-  useEffect(() => {
-    const handleNewMessageNotification = (notification) => {
-      // Handled above in handleMessageReceived
-    };
-    onNewMessageNotification(handleNewMessageNotification);
-    return () => {};
-  }, []);
-
-  // Typing indicators
-  useEffect(() => {
-    const handleUserTyping = (data) => {
-      setTypingUsers((prev) => ({ ...prev, [data.userId]: data.userName }));
-    };
-    const handleUserStoppedTyping = (data) => {
-      setTypingUsers((prev) => {
-        const updated = { ...prev };
-        delete updated[data.userId];
-        return updated;
       });
     };
-    onUserTyping(handleUserTyping);
-    onUserStoppedTyping(handleUserStoppedTyping);
+
+    if (s.connected) attach();
+    else s.once('connect', attach);
+
+    s.on('reconnect', () => {
+      attach();
+      if (currentConversationRef.current) joinConversation(currentConversationRef.current);
+    });
+
+    return () => { s.off('messageReceived'); s.off('reconnect'); s.disconnect(); socketRef.current = null; };
+  }, [user?._id, token]);
+
+  useEffect(() => {
+    onUserTyping((d) => setTypingUsers((p) => ({ ...p, [d.userId]: d.userName })));
+    onUserStoppedTyping((d) => setTypingUsers((p) => { const u = { ...p }; delete u[d.userId]; return u; }));
     return () => { offUserTyping(); offUserStoppedTyping(); };
   }, []);
 
-  // Read receipts
   useEffect(() => {
-    const handleMessagesRead = (data) => {
-      setMessages((prev) =>
-        prev.map((msg) => data.messageIds.includes(msg._id) ? { ...msg, isRead: true } : msg)
-      );
-    };
-    onMessagesRead(handleMessagesRead);
-    return () => {};
+    onMessagesRead((data) => {
+      setMessages((prev) => prev.map((m) => data.messageIds.includes(m._id) ? { ...m, isRead: true } : m));
+    });
   }, []);
 
-  // ✅ Listen for openChat event (from ChatNotification click)
-  // ChatContext handles the actual fetchChatHistory
-  // Chat.jsx handles setting selectedUserId
   useEffect(() => {
-    const handleOpenChat = (event) => {
-      const { conversationId } = event.detail;
-      if (currentConversationRef.current) {
-        leaveConversation(currentConversationRef.current);
-      }
-      fetchChatHistory(conversationId);
+    const h = (e) => {
+      if (currentConversationRef.current) leaveConversation(currentConversationRef.current);
+      fetchChatHistory(e.detail.conversationId);
     };
-
-    window.addEventListener('openChat', handleOpenChat);
-    return () => window.removeEventListener('openChat', handleOpenChat);
+    window.addEventListener('openChat', h);
+    return () => window.removeEventListener('openChat', h);
   }, [fetchChatHistory]);
 
-  // Switch conversation
-  const switchConversation = useCallback((conversationId) => {
-    if (currentConversationRef.current) {
-      leaveConversation(currentConversationRef.current);
-    }
+  const switchConversation = useCallback((id) => {
+    if (currentConversationRef.current) leaveConversation(currentConversationRef.current);
     setReplyTo(null);
-    fetchChatHistory(conversationId);
+    fetchChatHistory(id);
   }, [fetchChatHistory]);
 
-  // Close conversation
   const closeConversation = useCallback(() => {
-    if (currentConversationRef.current) {
-      leaveConversation(currentConversationRef.current);
-    }
-    setCurrentConversation(null);
-    setMessages([]);
-    setTypingUsers({});
-    setReplyTo(null);
+    if (currentConversationRef.current) leaveConversation(currentConversationRef.current);
+    setCurrentConversation(null); setMessages([]); setTypingUsers({}); setReplyTo(null);
   }, []);
 
-  const value = {
-    conversations,
-    currentConversation,
-    setCurrentConversation,
-    messages,
-    setMessages,
-    typingUsers,
-    unreadCount,
-    loading,
-    onlineUsers,
-    notifications,    // ✅ only incoming messages from others
-    replyTo,
-    setReplyTo,
-    fetchConversations,
-    fetchChatHistory,
-    fetchUnreadCount,
-    searchUsers,
-    switchConversation,
-    closeConversation,
-    setNotifications
-  };
+  const searchUsers = useCallback(async (q) => {
+    try { const r = await api.get('/chat/search/users', { params: { query: q } }); return r.data.users || []; }
+    catch { return []; }
+  }, []);
 
   return (
-    <ChatContext.Provider value={value}>
+    <ChatContext.Provider value={{
+      conversations, currentConversation, setCurrentConversation,
+      messages, setMessages, typingUsers, unreadCount, loading,
+      onlineUsers, notifications, replyTo, setReplyTo,
+      fetchConversations, fetchChatHistory, fetchUnreadCount,
+      searchUsers, switchConversation, closeConversation, setNotifications
+    }}>
       {children}
     </ChatContext.Provider>
   );
