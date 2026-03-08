@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Menu, X, Home, Upload, User, LogOut, Shield, BookOpen } from 'lucide-react';
+import { Menu, X, Home, Upload, User, LogOut, Shield, BookOpen, ChevronRight } from 'lucide-react';
 import ChatWidget from '../Buttom-navbR/AI';
 import ChatNotification from './ChatNotification';
 
@@ -14,202 +14,231 @@ const Navbar = () => {
     await logout();
     navigate('/login');
   };
-//  console.log("object",user.name.split(" ")[0]);
-//  var mn=user?.name.split(" ")[0];
-//  console.log(mn);
+
+  const navLinks = [
+    { to: '/', label: 'Home', icon: Home, show: true },
+    { to: '/upload', label: 'Upload', icon: Upload, show: isAuthenticated },
+    { to: '/profile', label: 'Profile', icon: User, show: isAuthenticated },
+    { to: '/admin', label: 'Admin', icon: Shield, show: isAuthenticated && isAdmin },
+  ];
+
   return (
-    <nav className="bg-gradient-to-r to-black  from-blue-800 shadow-md sticky top-0 z-50 border-b border-blue-700/50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3 group">
-            <div className="bg-gradient-to-br from-blue-800 to-cyan-500 p-2 rounded-lg shadow-md group-hover:shadow-lg transition-shadow duration-300">
-              <BookOpen className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-2xl font-bold">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-300">code4You</span>
-            </span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6  ">
-            <Link
-              to="/"
-              className="text-blue-100 hover:text-cyan-300 transition-colors duration-200 flex items-center space-x-1  "
-            >
-              <Home className="h-4 w-4" />
-              <span>Home</span>
-            </Link>
-            
-            {isAuthenticated && (
-              <>
-                <Link
-                  to="/upload"
-                  className="text-blue-100 hover:text-cyan-300 transition-colors duration-200 flex items-center space-x-1"
-                >
-                  <Upload className="h-4 w-4" />
-                  <span>Upload</span>
-                </Link>
-                <Link
-                  to="/profile"
-                  className="text-blue-100 hover:text-cyan-300 transition-colors duration-200 flex items-center space-x-1"
-                >
-                  <User className="h-4 w-4" />
-                  <span>Profile</span>
-                </Link>
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    className="text-blue-100 hover:text-cyan-300 transition-colors duration-200 flex items-center space-x-1"
-                  >
-                    <Shield className="h-4 w-4" />
-                    <span>Admin</span>
-                  </Link>
-                )}
-              </>
-            )}
-
-            {isAuthenticated ? (
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  {/* <div className="relative">
-                    
-                    {user?.isOnline && (
-                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-400 border-2 border-black"></span>
-                    )}
-                  </div> */}
-                    <ChatNotification/>
-                  <span className="text-blue-100 text-sm">{user?.name}</span>
+    <>
+      <nav className="bg-gradient-to-r to-black from-blue-800 shadow-lg sticky top-0 z-50 border-b border-blue-700/50 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <Link to="/" className="flex items-center space-x-3 group">
+              <div className="relative">
+                <div className="absolute inset-0 bg-cyan-400/30 rounded-lg blur-md group-hover:blur-lg transition-all duration-300" />
+                <div className="relative bg-gradient-to-br from-blue-800 to-cyan-500 p-2 rounded-lg shadow-md group-hover:shadow-xl transition-all duration-300">
+                  <BookOpen className="h-6 w-6 text-white" />
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="bg-orange-400 hover:bg-orange-500 text-white px-4 py-2 rounded-lg transition-all duration-800 flex items-center space-x-1 shadow-sm"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Logout</span>
-                </button>
               </div>
-            ) : (
-              <div className="flex items-center space-x-3">
-                <Link
-                  to="/login"
-                  className="text-blue-100 hover:text-cyan-300 transition-colors duration-200"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className="bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-500 hover:to-blue-500 text-black px-4 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
-                >
-                  Get Started
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden text-blue-100 hover:text-cyan-300 flex items-center space-x-1  flex-row-reverse "
-            >
-            {isOpen ? <X className="h-6 w-6 " /> : <Menu className="h-6 w-6 bg-gradient-to-br from-cyan-400 to-blue-400 text-black rounded-md " />}
-              <div className='flex flex-row-reverse px-4'>
-
-              <ChatNotification/>
-              </div>
-         
-          </button>
-        
-        </div>
-
-        {/* Mobile Navigation */}
-        {isOpen && (
-          <div className="md:hidden pb-4 space-y-2 bg-black/40 rounded-lg p-4 py- ">
-            
-            <Link
-              to="/"
-              className="block text-blue-100 hover:text-cyan-300 pl-2 border-r-2 rounded-lg  text-lg font-medium text-center"
-              onClick={() => setIsOpen(false)}
-            >
-              <div className="flex items-center space-x-2">
-                <Home className="h-4 w-4" />
-                <span>Home</span>
-              </div>
+              <span className="text-2xl font-bold">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-300">code4You</span>
+              </span>
             </Link>
-            
-            {isAuthenticated &&  (
-              <>
-                <Link
-                  to="/upload"
-                  className="block text-blue-100 hover:text-cyan-300 pl-2 border-r-2 rounded-lg  text-lg font-medium text-center"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Upload className="h-4 w-4" />
-                    <span>Upload</span>
-                  </div>
-                </Link>
-                <Link
-                  to="/profile"
-                  className="block text-blue-100 hover:text-cyan-300 pl-2 border-r-2 rounded-lg  text-lg font-medium text-center-2"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4" />
-                    <span>Profile</span>
-                  </div>
-                </Link>
-                {isAdmin && (
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-6">
+              {navLinks.map(({ to, label, icon: Icon, show }) => 
+                show && (
                   <Link
-                    to="/admin"
-                    className="block text-blue-100 hover:text-cyan-300 pl-2 border-r-2 rounded-lg  text-lg font-medium text-center-2"
-                    onClick={() => setIsOpen(false)}
+                    key={to}
+                    to={to}
+                    className="text-blue-100 hover:text-cyan-300 transition-all duration-200 flex items-center space-x-1.5 group relative"
                   >
-                    <div className="flex items-center space-x-2">
-                      <Shield className="h-4 w-4" />
-                      <span>Admin</span>
-                    </div>
+                    <Icon className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                    <span>{label}</span>
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-cyan-400 to-blue-400 group-hover:w-full transition-all duration-300" />
                   </Link>
-                )}
-                <button
-                  onClick={() => {
-                    handleLogout();
-                    setIsOpen(false);
-                  }}
-                  className="w-full text-left text-blue-100 hover:text-orange-400 pl-2 border-r-2 rounded-lg  text-lg font-medium text-center-2"
-                >
-                  <div className="flex items-center space-x-2">
+                )
+              )}
+
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2 bg-white/5 rounded-full px-3 py-1.5 border border-white/10">
+                    <ChatNotification />
+                    <span className="text-blue-100 text-sm font-medium">{user?.name}</span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center space-x-1.5 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 hover:scale-105"
+                  >
                     <LogOut className="h-4 w-4" />
                     <span>Logout</span>
-                  </div>
-                </button>
-              </>
-            )}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <Link
+                    to="/login"
+                    className="text-blue-100 hover:text-cyan-300 transition-colors duration-200 font-medium"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-500 hover:to-blue-500 text-black px-5 py-2 rounded-lg transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 font-semibold hover:scale-105"
+                  >
+                    Get Started
+                  </Link>
+                </div>
+              )}
+            </div>
 
-            {!isAuthenticated && (
-              <div className="space-y-2 pt-2">
-                <Link
-                  to="/login"
-                  className="block text-blue-100 hover:text-cyan-300 py-2"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className="block bg-gradient-to-r from-cyan-400 to-blue-400 text-black px-4 py-2 rounded-lg text-center"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Get Started
-                </Link>
-              </div>
-            )}
+            {/* Mobile menu button */}
+            <div className="md:hidden flex items-center space-x-3">
+              <ChatNotification />
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="text-blue-100 hover:text-cyan-300 p-2 rounded-lg bg-white/5 border border-white/10 hover:border-cyan-400/50 transition-all duration-300"
+              >
+                {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              </button>
+            </div>
           </div>
-        )}
+        </div>
 
-      </div>
-      <ChatWidget/>
-    </nav>
+        {/* Mobile Navigation - Beautiful Dropdown */}
+        <div
+          className={`md:hidden overflow-hidden transition-all duration-500 ease-in-out ${
+            isOpen ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="relative">
+            {/* Decorative gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-blue-900/50 via-black/60 to-black/80 backdrop-blur-xl pointer-events-none" />
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
+            
+            <div className="relative px-4 pb-6 pt-4 space-y-4">
+              {/* User Profile Card - Beautiful Glassmorphic Design */}
+              
+
+              {/* Navigation Links */}
+              <div className="space-y-2">
+                <Link
+                  to="/"
+                  className="group relative flex items-center space-x-3 p-3.5 rounded-xl bg-white/5 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 border border-white/10 hover:border-cyan-500/50 transition-all duration-300 hover:translate-x-1 hover:shadow-lg hover:shadow-cyan-500/20"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <div className="h-11 w-11 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center group-hover:from-cyan-500/30 group-hover:to-blue-500/30 transition-all group-hover:scale-110">
+                    <Home className="h-5 w-5 text-cyan-400 group-hover:text-cyan-300" />
+                  </div>
+                  <span className="text-blue-100 font-semibold text-base group-hover:text-white transition-colors">
+                    Home
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-cyan-400 transition-all ml-auto group-hover:translate-x-1" />
+                </Link>
+
+                {isAuthenticated && (
+                  <>
+                    <Link
+                      to="/upload"
+                      className="group relative flex items-center space-x-3 p-3.5 rounded-xl bg-white/5 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 border border-white/10 hover:border-cyan-500/50 transition-all duration-300 hover:translate-x-1 hover:shadow-lg hover:shadow-cyan-500/20"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <div className="h-11 w-11 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center group-hover:from-cyan-500/30 group-hover:to-blue-500/30 transition-all group-hover:scale-110">
+                        <Upload className="h-5 w-5 text-cyan-400 group-hover:text-cyan-300" />
+                      </div>
+                      <span className="text-blue-100 font-semibold text-base group-hover:text-white transition-colors">
+                        Upload
+                      </span>
+                      <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-cyan-400 transition-all ml-auto group-hover:translate-x-1" />
+                    </Link>
+
+                    <Link
+                      to="/profile"
+                      className="group relative flex items-center space-x-3 p-3.5 rounded-xl bg-white/5 hover:bg-gradient-to-r hover:from-cyan-500/20 hover:to-blue-500/20 border border-white/10 hover:border-cyan-500/50 transition-all duration-300 hover:translate-x-1 hover:shadow-lg hover:shadow-cyan-500/20"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <div className="h-11 w-11 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center group-hover:from-cyan-500/30 group-hover:to-blue-500/30 transition-all group-hover:scale-110">
+                        <User className="h-5 w-5 text-cyan-400 group-hover:text-cyan-300" />
+                      </div>
+                      <span className="text-blue-100 font-semibold text-base group-hover:text-white transition-colors">
+                        Profile
+                      </span>
+                      <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-cyan-400 transition-all ml-auto group-hover:translate-x-1" />
+                    </Link>
+
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        className="group relative flex items-center space-x-3 p-3.5 rounded-xl bg-white/5 hover:bg-gradient-to-r hover:from-purple-500/20 hover:to-pink-500/20 border border-white/10 hover:border-purple-500/50 transition-all duration-300 hover:translate-x-1 hover:shadow-lg hover:shadow-purple-500/20"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <div className="h-11 w-11 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center group-hover:from-purple-500/30 group-hover:to-pink-500/30 transition-all group-hover:scale-110">
+                          <Shield className="h-5 w-5 text-purple-400 group-hover:text-purple-300" />
+                        </div>
+                        <span className="text-blue-100 font-semibold text-base group-hover:text-white transition-colors">
+                          Admin
+                        </span>
+                        <ChevronRight className="h-5 w-5 text-slate-500 group-hover:text-purple-400 transition-all ml-auto group-hover:translate-x-1" />
+                      </Link>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Auth Actions */}
+              <div className="pt-4 border-t border-white/10">
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsOpen(false);
+                    }}
+                    className="w-full group relative flex items-center space-x-3 p-3.5 rounded-xl bg-gradient-to-r from-orange-500/10 to-red-500/10 hover:from-orange-500/20 hover:to-red-500/20 border border-orange-500/40 hover:border-orange-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/30"
+                  >
+                    <div className="h-11 w-11 rounded-lg bg-orange-500/20 flex items-center justify-center group-hover:bg-orange-500/30 transition-all group-hover:scale-110">
+                      <LogOut className="h-5 w-5 text-orange-400 group-hover:text-orange-300" />
+                    </div>
+                    <span className="text-orange-400 font-semibold text-base group-hover:text-orange-300 transition-colors">
+                      Logout
+                    </span>
+                    <ChevronRight className="h-5 w-5 text-orange-400/50 group-hover:text-orange-400 transition-all ml-auto group-hover:translate-x-1" />
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <Link
+                      to="/login"
+                      onClick={() => setIsOpen(false)}
+                      className="block w-full text-center py-3.5 px-4 rounded-xl border-2 border-cyan-500/30 text-cyan-300 hover:text-white hover:bg-cyan-500/10 hover:border-cyan-400/60 transition-all duration-300 font-semibold text-base hover:shadow-lg hover:shadow-cyan-500/20"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      to="/register"
+                      onClick={() => setIsOpen(false)}
+                      className="relative block w-full text-center py-3.5 px-4 rounded-xl font-bold text-base overflow-hidden group"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 group-hover:from-cyan-300 group-hover:via-blue-300 group-hover:to-purple-300 transition-all duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-white/20 to-cyan-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                      <span className="relative text-black flex items-center justify-center space-x-2">
+                        <span>Get Started</span>
+                        <ChevronRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                      </span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer Badge */}
+              <div className="pt-4 text-center">
+                <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/30">
+                  <div className="h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                  <span className="text-xs font-semibold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-300">
+                    Powered by code4You
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+      <ChatWidget />
+    </>
   );
 };
 

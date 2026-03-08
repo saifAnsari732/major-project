@@ -24,7 +24,6 @@ const ButtomNav = () => {
 
         <button 
           className={`nav-item ${activeNav === 'explore' ? 'active' : ''}`}
-          // onClick={() => navigate('/compiler')}
           onClick={()=>navigate('/code-compiler')}
           aria-label="Explore"
         >
